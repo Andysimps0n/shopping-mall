@@ -1,0 +1,1080 @@
+/* Pretendard: premium Korean-friendly typeface loaded from CDN. */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+/*
+  Naming pattern used across the page:
+
+  Component name  = the top wrapper class (must match the React component, e.g. .Header)
+  wrapper         = the inner layout shell (shared page inset, flex alignment)
+  content         = the actual text / media / controls inside that shell
+*/
+
+:root {
+  --font-pretendard: "Pretendard Variable", "Pretendard", system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, serif;
+
+  --color-brand: #63298c;
+  --color-brand-hover: #511f73;
+  --color-ink: #1a1a1a;
+  --color-muted: #6b6b6b;
+  --color-well: #f5f5f5;
+  --color-hairline: #ebebeb;
+  --color-wash: #f9f9f9;
+  --color-white: #ffffff;
+  /* Warm off-whites for hero type — less glare than #fff on a photo. */
+  --color-cream: #f3eee4;
+  --color-cream-soft: #e4d9c8;
+
+  /*
+    Shared horizontal inset — this is the left edge of the header logo.
+    Formula mirrors a centered max-width content column:
+      side gutter + optional centering margin when the viewport is wider than 1200px.
+  */
+  --page-max: 1200px;
+  --page-gutter: 1.25rem;
+  --page-inset: max(
+    var(--page-gutter),
+    calc((100vw - var(--page-max)) / 2 + var(--page-gutter))
+  );
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-gutter: 2rem;
+  }
+}
+
+/* ---------- Reset (replaces Tailwind Preflight) ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font-family: var(--font-pretendard);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+svg {
+  display: block;
+}
+
+/* ---------- Shared layout helpers ---------- */
+
+.container {
+  padding-left: var(--page-inset);
+  padding-right: var(--page-inset);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.icon--lg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--color-brand);
+  color: var(--color-white);
+  font-weight: 500;
+  transition: background-color 150ms ease;
+}
+
+.button:hover {
+  background-color: var(--color-brand-hover);
+}
+
+.button--secondary {
+  background-color: transparent;
+  color: var(--color-brand);
+  border: 1px solid var(--color-brand);
+}
+
+.button--secondary:hover {
+  background-color: var(--color-well);
+}
+
+/* ---------- Header ---------- */
+
+.Header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--color-hairline);
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    backdrop-filter 200ms ease;
+}
+
+/* Hero sits *under* this bar, so a lighter fill lets the photo show through
+   the blur instead of a hard white strip. */
+.Header.is-over-hero {
+  background-color: rgba(255, 255, 255, 0.22);
+  border-bottom-color: transparent;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+
+.header-wrapper {
+  display: flex;
+  height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.BrandLogo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.header-logo-title {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-brand);
+}
+
+.header-logo-subtitle {
+  margin-top: 0.125rem;
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  color: var(--color-muted);
+}
+
+.header-content {
+  display: none;
+  align-items: center;
+  gap: 2rem;
+}
+
+.header-link {
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  transition: color 150ms ease;
+}
+
+.header-link:hover {
+  color: var(--color-brand);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.IconButton {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: var(--color-ink);
+  transition: background-color 150ms ease;
+}
+
+.IconButton:hover {
+  background-color: var(--color-well);
+}
+
+@media (min-width: 768px) {
+  .header-logo-title {
+    font-size: 1.85rem;
+  }
+
+  .header-logo-subtitle {
+    font-size: 0.6rem;
+  }
+
+  .header-content {
+    display: flex;
+  }
+}
+
+/* ---------- Hero carousel ---------- */
+
+.HeroCarousel {
+  position: relative;
+  width: 100%;
+  /* Full viewport, pulled up under the 4rem header so the photo is what
+     the header's backdrop-filter actually blurs. */
+  height: 100vh;
+  min-height: 420px;
+  margin-top: -4rem;
+  overflow: hidden;
+}
+
+/* .hero-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(198, 198, 198, 0.3),
+    rgba(0, 0, 0, 0.2),
+    transparent
+  );
+} */
+
+.hero-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 5rem;
+}
+
+.hero-content {
+  margin-top: 27%;
+  max-width: 36rem;
+}
+
+.hero-category {
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--color-cream-soft);
+}
+
+.hero-title {
+  margin-top: 1rem;
+  white-space: pre-line;
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--color-cream);
+}
+
+.hero-name {
+  margin-top: 1.25rem;
+  font-size: 1.125rem;
+  color: var(--color-cream-soft);
+}
+
+.hero-price {
+  margin-top: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-cream);
+}
+
+.hero-button {
+  margin-top: 1.75rem;
+  padding: 0.875rem 2.25rem;
+  font-size: 1rem;
+}
+
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--color-white);
+  backdrop-filter: blur(4px);
+  transform: translateY(-50%);
+  transition: background-color 150ms ease;
+}
+
+.hero-arrow:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.hero-arrow--prev {
+  left: 0.75rem;
+}
+
+.hero-arrow--next {
+  right: 0.75rem;
+}
+
+.hero-dots {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  transform: translateX(-50%);
+}
+
+.hero-dot {
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.4);
+  transition: width 150ms ease, background-color 150ms ease;
+}
+
+.hero-dot:hover {
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-dot.is-active {
+  width: 1.75rem;
+  background-color: var(--color-white);
+}
+
+@media (min-width: 768px) {
+  .hero-wrapper {
+    padding-bottom: 6rem;
+  }
+
+  .hero-title {
+    font-size: 3.75rem;
+  }
+
+  .hero-name {
+    font-size: 1.25rem;
+  }
+
+  .hero-price {
+    font-size: 1.5rem;
+  }
+
+  .hero-arrow--prev {
+    left: 1.5rem;
+  }
+
+  .hero-arrow--next {
+    right: 1.5rem;
+  }
+}
+
+/* ---------- Product image placeholder ---------- */
+
+.ProductImage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--color-well);
+}
+
+.ProductImage--cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ProductImage--card {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.ProductImage--detail {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.ProductImage--banner {
+  width: 100%;
+  height: 100%;
+  min-height: 22rem;
+}
+
+/* Real product photo: fill the parent box. Bottle shots are often
+   landscape with the product on the right, so pin focus to the right. */
+.product-image-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+}
+
+.product-image-monogram {
+  font-size: 3rem;
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  color: rgba(99, 41, 140, 0.25);
+}
+
+.product-image-label {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: rgba(107, 107, 107, 0.6);
+}
+
+@media (min-width: 768px) {
+  .product-image-monogram {
+    font-size: 4.5rem;
+  }
+}
+
+/* ---------- Product cards ---------- */
+
+.ProductCard {
+  position: relative;
+}
+
+.product-card-link {
+  display: block;
+  color: inherit;
+}
+
+.product-card-media {
+  position: relative;
+}
+
+.product-card-wishlist {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.7);
+  color: var(--color-ink);
+  backdrop-filter: blur(4px);
+  transition: color 150ms ease;
+}
+
+.product-card-wishlist:hover,
+.product-card-wishlist.is-active {
+  color: var(--color-brand);
+}
+
+.product-card-content {
+  margin-top: 1.25rem;
+}
+
+.product-card-price {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.product-card-name {
+  margin-top: 0.25rem;
+  font-size: 1rem;
+  color: var(--color-ink);
+  transition: color 150ms ease;
+}
+
+.product-card-description {
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.product-card-category {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: rgba(107, 107, 107, 0.7);
+}
+
+.product-card-action {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-brand);
+  transition: color 150ms ease;
+}
+
+.ProductCard:hover .product-card-name,
+.ProductCard:hover .product-card-action {
+  color: var(--color-brand);
+}
+
+/* ---------- Product grid (2-column catalog under the hero) ---------- */
+
+.ProductGrid {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.grid-heading {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.grid-copy {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  color: var(--color-muted);
+}
+
+.grid-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+  margin-top: 2.5rem; 
+}
+
+.ProductGrid .product-card-price {
+  font-size: 1.25rem;
+}
+
+.ProductGrid .product-card-name {
+  font-size: 1.125rem;
+}
+
+@media (min-width: 640px) {
+  .grid-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .ProductGrid {
+    padding-top: 7rem;
+    padding-bottom: 7rem;
+  }
+
+  .grid-heading {
+    font-size: 2.25rem;
+  }
+
+  .grid-content {
+    gap: 4rem 2rem;
+    margin-top: 3.5rem;
+  }
+}
+
+/* ---------- Brand intro ---------- */
+
+.BrandIntro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+  background-color: var(--color-wash);
+}
+
+.intro-wrapper {
+  width: 75%;
+  text-align: center;
+}
+
+.intro-heading {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.intro-copy {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.625;
+  color: var(--color-muted);
+}
+
+.intro-button {
+  margin-top: 2.5rem;
+  padding: 0.875rem 2rem;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .BrandIntro {
+    padding-top: 7rem;
+    padding-bottom: 7rem;
+  }
+
+  .intro-heading {
+    font-size: 2.25rem;
+  }
+
+  .intro-copy {
+    font-size: 1.125rem;
+  }
+}
+
+/* ---------- Brand page ---------- */
+
+.BrandPage {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+.brand-page-wrapper {
+  max-width: 80%;
+}
+
+.brand-page-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--color-muted);
+}
+
+.brand-page-heading {
+  margin-top: 0.75rem;
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.brand-page-copy {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.625;
+  color: var(--color-muted);
+}
+
+@media (min-width: 768px) {
+  .BrandPage {
+    padding-top: 7rem;
+    padding-bottom: 7rem;
+  }
+
+  .brand-page-heading {
+    font-size: 2.25rem;
+  }
+
+  .brand-page-copy {
+    font-size: 1.125rem;
+  }
+}
+
+/* ---------- Product page ---------- */
+
+.product-page-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.product-page-gallery {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-page-media {
+  position: relative;
+}
+
+.product-page-back {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1;
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.7rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  backdrop-filter: blur(4px);
+  transition: color 150ms ease;
+}
+
+.product-page-back:hover {
+  color: var(--color-brand);
+}
+
+.product-page-banner {
+  position: relative;
+  min-height: 22rem;
+}
+
+.product-page-banner-content {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.45),
+    rgba(0, 0, 0, 0.08),
+    transparent
+  );
+}
+
+.product-page-banner-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.product-page-banner-copy {
+  margin-top: 0.75rem;
+  white-space: pre-line;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  color: var(--color-white);
+}
+
+.product-page-info {
+  border-top: 1px solid var(--color-hairline);
+  padding: 2rem var(--page-inset) 3rem;
+}
+
+.product-page-breadcrumb {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.product-page-breadcrumb a:hover {
+  color: var(--color-brand);
+}
+
+.product-page-category {
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--color-muted);
+}
+
+.product-page-name {
+  margin-top: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.product-page-tagline {
+  margin-top: 0.75rem;
+  white-space: pre-line;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-ink);
+}
+
+.product-page-description {
+  margin-top: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.product-page-story {
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.product-page-price {
+  margin-top: 2rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.product-page-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.product-page-buy,
+.product-page-cart {
+  flex: 1;
+  padding: 0.95rem 1.25rem;
+  font-size: 1rem;
+}
+
+.ProductReviews {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  border-top: 1px solid var(--color-hairline);
+  background-color: var(--color-wash);
+}
+
+.reviews-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.reviews-empty {
+  margin-top: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+.reviews-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+.reviews-summary-score {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.reviews-content {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.ReviewCard {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 1rem;
+  background-color: var(--color-white);
+}
+
+.review-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.review-card-meta {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.review-card-author {
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.review-card-title {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.review-card-body {
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.StarRating {
+  display: inline-flex;
+  gap: 0.15rem;
+  color: var(--color-brand);
+}
+
+.StarIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ProductRecommend {
+  padding-top: 4rem;
+  padding-bottom: 5rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.recommend-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.recommend-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 640px) {
+  .product-page-banner {
+    min-height: 28rem;
+  }
+
+  .ProductImage--banner {
+    min-height: 28rem;
+  }
+
+  .recommend-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .product-page-banner-content {
+    padding: 3rem 2.5rem;
+  }
+
+  .product-page-banner-copy {
+    font-size: 2.25rem;
+  }
+
+  .product-page-name {
+    font-size: 2rem;
+  }
+
+  .ProductReviews {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+
+  .reviews-heading {
+    font-size: 1.75rem;
+  }
+
+  .ProductRecommend {
+    padding-top: 5rem;
+    padding-bottom: 7rem;
+  }
+
+  .recommend-heading {
+    font-size: 1.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-page-layout {
+    grid-template-columns: minmax(0, 1.7fr) minmax(22rem, 0.85fr);
+    align-items: start;
+  }
+
+  .product-page-banner {
+    min-height: 36rem;
+  }
+
+  .ProductImage--banner {
+    min-height: 36rem;
+  }
+
+  .product-page-info {
+    position: sticky;
+    top: 4rem;
+    border-top: none;
+    padding: 2.5rem 2.5rem 4rem 2rem;
+    min-height: calc(100vh - 4rem);
+  }
+
+  .recommend-content {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.75rem;
+    margin-top: 2.5rem;
+  }
+}
+
+/* ---------- Footer ---------- */
+
+.Footer {
+  border-top: 1px solid var(--color-hairline);
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.footer-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-brand);
+}
+
+.footer-copy {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.footer-legal {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(107, 107, 107, 0.7);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
