@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
-import { formatPrice, products } from "@/lib/products";
+import { formatPrice, getProductImageSrc, products } from "@/lib/products";
 
 export default function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -35,11 +35,7 @@ export default function HeroCarousel() {
         // Only pass a real photo when the file actually exists in /public.
         // Other catalog entries still point at missing .jpg files, so keep
         // those as placeholders until their photos are added.
-        src={
-          activeProduct.image === "/products/shampoo_sixteen_3.png"
-            ? activeProduct.image
-            : undefined
-        }
+        src={getProductImageSrc(activeProduct)}
         cover
       />
 

@@ -3,7 +3,7 @@ import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
 import ProductImage from "./ProductImage";
 import ProductReviews from "./ProductReviews";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getProductImageSrc } from "@/lib/products";
 
 /**
  * Product detail layout:
@@ -21,6 +21,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
             <ProductImage
               name={product.name}
               categoryLabel={product.categoryLabel}
+              src={getProductImageSrc(product)}
               size="detail"
             />
           </div>
@@ -29,6 +30,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
             <ProductImage
               name={product.name}
               categoryLabel={product.categoryLabel}
+              src={getProductImageSrc(product)}
               size="banner"
             />
             <div className="product-page-banner-content">

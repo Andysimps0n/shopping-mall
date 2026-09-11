@@ -421,7 +421,7 @@ svg {
 .hero-arrow {
   position: absolute;
   top: auto;
-  bottom: 4.65rem;
+  bottom: 1.15rem;
   display: flex;
   width: 2.75rem;
   height: 2.75rem;
@@ -572,6 +572,13 @@ svg {
 .ProductImage--card {
   width: 100%;
   aspect-ratio: 4 / 5;
+}
+
+@media (min-width: 640px) {
+  /* Square wells keep price/name in view on the 2-column catalog. */
+  .ProductImage--card {
+    aspect-ratio: 1 / 1;
+  }
 }
 
 .ProductImage--detail {

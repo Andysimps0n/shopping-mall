@@ -1,8 +1,13 @@
+"use client";
+
+import { useState } from "react";
+
 // Product photo (or a soft placeholder when no real image exists yet).
 //
 // When `src` is provided, we fill the parent with a real photo using
-// object-fit: cover. When it is missing, we keep the gray "AC" well so
-// the layout still looks finished. The parent always controls size.
+// object-fit: cover. If the file is missing, onError falls back to the
+// gray "AC" well so the layout still looks finished. The parent always
+// controls size.
 
 /**
  * @param {object} props
@@ -19,17 +24,19 @@ export default function ProductImage({
   cover = false,
   size,
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const resolvedSize = size ?? (cover ? "cover" : "card");
   const className = `ProductImage ProductImage--${resolvedSize}`;
+  const showPhoto = Boolean(src) && !imageFailed;
 
-  // Real photo path? Show the image. Otherwise fall back to the monogram well.
-  if (src) {
+  if (showPhoto) {
     return (
       <div className={className}>
         <img
           src={src}
           alt={`${name} 제품 이미지`}
           className="product-image-photo"
+          onError={() => setImageFailed(true)}
         />
       </div>
     );
