@@ -1,5 +1,7 @@
+import Link from "next/link";
+
 // Company description interstitial — text pause after the product grid.
-// Neutral gray band keeps it distinct from the white sections around it.
+// Soft wash band keeps it distinct from the white sections around it.
 
 export default function BrandIntro() {
   return (
@@ -9,6 +11,7 @@ export default function BrandIntro() {
     >
       <div className="intro-wrapper container">
         <div className="intro-content">
+          <p className="intro-eyebrow">BRAND</p>
           <h2 id="brand-intro-heading" className="intro-heading">
             AnnChloe Beauty People
           </h2>
@@ -20,9 +23,9 @@ export default function BrandIntro() {
             우리는 본질에 집중합니다.
           </p>
 
-          <a href="/brand" className="button intro-button">
+          <Link href="/brand" className="button intro-button">
             브랜드 이야기
-          </a>
+          </Link>
         </div>
       </div>
     </section>

@@ -30,6 +30,7 @@ export default function ProductBackButton() {
       type="button"
       onClick={() => router.back()}
       className="product-page-back"
+      aria-label="이전 페이지로 이동"
     >
       <BackArrowIcon />
       뒤로가기

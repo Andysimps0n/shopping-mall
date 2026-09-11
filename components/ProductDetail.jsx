@@ -41,7 +41,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
         <aside className="product-page-info">
           <div className="product-page-info-content">
             <nav className="product-page-breadcrumb" aria-label="경로">
-              <Link href="/">Home</Link>
+              <Link href="/">홈</Link>
               <span aria-hidden="true"> / </span>
               <Link href="/#collection">{product.categoryLabel}</Link>
             </nav>

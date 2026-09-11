@@ -46,17 +46,19 @@ export default function HeroCarousel() {
       <div className="hero-overlay" aria-hidden="true" />
 
       <div className="hero-wrapper container">
-        <div className="hero-content">
+        <div className="hero-content" key={activeProduct.id} aria-live="polite">
+          <p className="hero-category">{activeProduct.categoryLabel}</p>
 
           <h1 className="hero-title">{activeProduct.tagline}</h1>
 
-          <p className="hero-name">{activeProduct.name}</p>
-
-          <p className="hero-price">{formatPrice(activeProduct.price)}</p>
+          <div className="hero-meta">
+            <p className="hero-name">{activeProduct.name}</p>
+            <p className="hero-price">{formatPrice(activeProduct.price)}</p>
+          </div>
 
           <Link
             href={`/products/${activeProduct.id}`}
-            className="button hero-button"
+            className="button button--on-dark hero-button"
           >
             구매하기
           </Link>

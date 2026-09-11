@@ -15,15 +15,28 @@
 
   --color-brand: #63298c;
   --color-brand-hover: #511f73;
+  --color-brand-soft: rgba(99, 41, 140, 0.08);
   --color-ink: #1a1a1a;
   --color-muted: #6b6b6b;
-  --color-well: #f5f5f5;
-  --color-hairline: #ebebeb;
-  --color-wash: #f9f9f9;
+  --color-well: #f3f0f5;
+  --color-hairline: #e8e4ea;
+  --color-wash: #f8f6f9;
   --color-white: #ffffff;
   /* Warm off-whites for hero type — less glare than #fff on a photo. */
   --color-cream: #f3eee4;
   --color-cream-soft: #e4d9c8;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration: 220ms;
+  --duration-slow: 480ms;
+
+  --focus-ring: 2px solid var(--color-brand);
+  --focus-offset: 3px;
+
+  --header-height: 4rem;
+  --space-section: 5rem;
+  --space-section-lg: 7rem;
 
   /*
     Shared horizontal inset — this is the left edge of the header logo.
@@ -66,6 +79,7 @@ body {
   background-color: var(--color-white);
   color: var(--color-ink);
   font-family: var(--font-pretendard);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -95,6 +109,20 @@ svg {
   display: block;
 }
 
+::selection {
+  background: var(--color-brand-soft);
+  color: var(--color-ink);
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
 /* ---------- Shared layout helpers ---------- */
 
 .container {
@@ -116,15 +144,27 @@ svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.75rem 1.75rem;
   border-radius: 9999px;
   background-color: var(--color-brand);
   color: var(--color-white);
+  font-size: 0.9375rem;
   font-weight: 500;
-  transition: background-color 150ms ease;
+  letter-spacing: 0.04em;
+  transition:
+    background-color var(--duration) var(--ease-out),
+    color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    transform var(--duration-fast) ease;
 }
 
 .button:hover {
   background-color: var(--color-brand-hover);
+}
+
+.button:active {
+  transform: scale(0.98);
 }
 
 .button--secondary {
@@ -134,7 +174,16 @@ svg {
 }
 
 .button--secondary:hover {
-  background-color: var(--color-well);
+  background-color: var(--color-brand-soft);
+}
+
+.button--on-dark {
+  background-color: var(--color-cream);
+  color: var(--color-brand);
+}
+
+.button--on-dark:hover {
+  background-color: var(--color-white);
 }
 
 /* ---------- Header ---------- */
@@ -143,28 +192,29 @@ svg {
   position: sticky;
   top: 0;
   z-index: 50;
+  height: var(--header-height);
   border-bottom: 1px solid var(--color-hairline);
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
   transition:
-    background-color 200ms ease,
-    border-color 200ms ease,
-    backdrop-filter 200ms ease;
+    background-color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    box-shadow var(--duration) var(--ease-out);
 }
 
 /* Hero sits *under* this bar, so a lighter fill lets the photo show through
    the blur instead of a hard white strip. */
 .Header.is-over-hero {
-  background-color: rgba(255, 255, 255, 0.22);
-  border-bottom-color: transparent;
-  backdrop-filter: blur(20px) saturate(1.2);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  background-color: rgba(255, 251, 248, 0.28);
+  border-bottom-color: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
 }
 
 .header-wrapper {
   display: flex;
-  height: 4rem;
+  height: var(--header-height);
   align-items: center;
   justify-content: space-between;
 }
@@ -174,6 +224,7 @@ svg {
   flex-direction: column;
   align-items: center;
   line-height: 1;
+  border-radius: 0.25rem;
 }
 
 .header-logo-title {
@@ -185,7 +236,7 @@ svg {
 }
 
 .header-logo-subtitle {
-  margin-top: 0.125rem;
+  margin-top: 0.2rem;
   font-size: 0.55rem;
   font-weight: 500;
   letter-spacing: 0.28em;
@@ -199,34 +250,63 @@ svg {
 }
 
 .header-link {
+  position: relative;
+  padding: 0.4rem 0;
   font-size: 0.875rem;
+  letter-spacing: 0.02em;
   color: var(--color-ink);
-  transition: color 150ms ease;
+  transition: color var(--duration-fast) ease;
 }
 
-.header-link:hover {
+.header-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.1rem;
+  height: 1px;
+  background-color: var(--color-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.header-link:hover,
+.header-link[aria-current="page"] {
   color: var(--color-brand);
+}
+
+.header-link:hover::after,
+.header-link[aria-current="page"]::after {
+  transform: scaleX(1);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .IconButton {
   display: flex;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
   color: var(--color-ink);
-  transition: background-color 150ms ease;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
 }
 
 .IconButton:hover {
   background-color: var(--color-well);
+  color: var(--color-brand);
+}
+
+.Header.is-over-hero .IconButton:hover {
+  background-color: rgba(255, 255, 255, 0.38);
 }
 
 @media (min-width: 768px) {
@@ -248,152 +328,222 @@ svg {
 .HeroCarousel {
   position: relative;
   width: 100%;
-  /* Full viewport, pulled up under the 4rem header so the photo is what
+  /* Full viewport, pulled up under the header so the photo is what
      the header's backdrop-filter actually blurs. */
   height: 100vh;
-  min-height: 420px;
-  margin-top: -4rem;
+  height: 100dvh;
+  min-height: 36rem;
+  margin-top: calc(var(--header-height) * -1);
   overflow: hidden;
+  background-color: #2a2033;
 }
 
-/* .hero-overlay {
+.hero-overlay {
   pointer-events: none;
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(198, 198, 198, 0.3),
-    rgba(0, 0, 0, 0.2),
-    transparent
-  );
-} */
+  background:
+    linear-gradient(
+      108deg,
+      rgba(22, 10, 32, 0.68) 0%,
+      rgba(22, 10, 32, 0.36) 38%,
+      rgba(22, 10, 32, 0.08) 66%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(18, 8, 26, 0.55) 0%,
+      rgba(18, 8, 26, 0.12) 38%,
+      transparent 62%
+    );
+}
 
 .hero-wrapper {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: 5rem;
+  justify-content: flex-end;
+  padding-top: calc(var(--header-height) + 1.5rem);
+  padding-bottom: 5.25rem;
 }
 
 .hero-content {
-  margin-top: 27%;
   max-width: 36rem;
+  animation: hero-fade-in var(--duration-slow) var(--ease-out);
 }
 
 .hero-category {
-  font-size: 0.875rem;
-  letter-spacing: 0.2em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   color: var(--color-cream-soft);
 }
 
 .hero-title {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   white-space: pre-line;
-  font-size: 2.25rem;
+  font-size: clamp(2rem, 6.4vw, 3.75rem);
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.025em;
+  line-height: 1.14;
+  letter-spacing: -0.03em;
   color: var(--color-cream);
 }
 
+.hero-meta {
+  margin-top: 1.35rem;
+}
+
 .hero-name {
-  margin-top: 1.25rem;
-  font-size: 1.125rem;
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
   color: var(--color-cream-soft);
 }
 
 .hero-price {
-  margin-top: 0.5rem;
-  font-size: 1.25rem;
+  margin-top: 0.35rem;
+  font-size: 1.125rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--color-cream);
 }
 
 .hero-button {
-  margin-top: 1.75rem;
-  padding: 0.875rem 2.25rem;
-  font-size: 1rem;
+  margin-top: 1.6rem;
+  padding: 0.875rem 2.1rem;
+  font-size: 0.9375rem;
+}
+
+.hero-button:focus-visible {
+  outline-color: var(--color-cream);
 }
 
 .hero-arrow {
   position: absolute;
-  top: 50%;
+  top: auto;
+  bottom: 4.65rem;
   display: flex;
   width: 2.75rem;
   height: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.14);
   color: var(--color-white);
-  backdrop-filter: blur(4px);
-  transform: translateY(-50%);
-  transition: background-color 150ms ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    background-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 
 .hero-arrow:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
+.hero-arrow:active {
+  transform: scale(0.96);
+}
+
+.hero-arrow:focus-visible {
+  outline-color: var(--color-cream);
+}
+
 .hero-arrow--prev {
-  left: 0.75rem;
+  left: var(--page-gutter);
 }
 
 .hero-arrow--next {
-  right: 0.75rem;
+  right: var(--page-gutter);
 }
 
 .hero-dots {
   position: absolute;
-  bottom: 1.5rem;
+  bottom: 1.15rem;
   left: 50%;
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.15rem;
   transform: translateX(-50%);
 }
 
 .hero-dot {
-  height: 0.375rem;
-  width: 0.375rem;
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-dot::after {
+  content: "";
+  height: 0.35rem;
+  width: 0.35rem;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.4);
-  transition: width 150ms ease, background-color 150ms ease;
+  background-color: rgba(255, 255, 255, 0.42);
+  transition:
+    width var(--duration) var(--ease-out),
+    background-color var(--duration-fast) ease;
 }
 
-.hero-dot:hover {
-  background-color: rgba(255, 255, 255, 0.7);
+.hero-dot:hover::after {
+  background-color: rgba(255, 255, 255, 0.75);
 }
 
-.hero-dot.is-active {
-  width: 1.75rem;
+.hero-dot.is-active::after {
+  width: 1.7rem;
   background-color: var(--color-white);
+}
+
+.hero-dot:focus-visible {
+  outline-color: var(--color-cream);
+}
+
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.45rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (min-width: 768px) {
   .hero-wrapper {
+    justify-content: center;
+    padding-top: calc(var(--header-height) + 2rem);
     padding-bottom: 6rem;
   }
 
-  .hero-title {
-    font-size: 3.75rem;
+  .hero-meta {
+    margin-top: 1.6rem;
   }
 
   .hero-name {
-    font-size: 1.25rem;
+    font-size: 1.0625rem;
   }
 
   .hero-price {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
 
-  .hero-arrow--prev {
-    left: 1.5rem;
+  .hero-arrow {
+    top: 50%;
+    bottom: auto;
+    width: 3rem;
+    height: 3rem;
+    transform: translateY(-50%);
   }
 
-  .hero-arrow--next {
-    right: 1.5rem;
+  .hero-arrow:active {
+    transform: translateY(-50%) scale(0.96);
+  }
+
+  .hero-dots {
+    bottom: 1.75rem;
   }
 }
 
@@ -406,7 +556,10 @@ svg {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: var(--color-well);
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(99, 41, 140, 0.07), transparent 58%),
+    var(--color-well);
+  transition: transform var(--duration-slow) var(--ease-out);
 }
 
 .ProductImage--cover {
@@ -418,7 +571,7 @@ svg {
 
 .ProductImage--card {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 5;
 }
 
 .ProductImage--detail {
@@ -439,25 +592,27 @@ svg {
   height: 100%;
   object-fit: cover;
   object-position: right center;
+  transition: transform var(--duration-slow) var(--ease-out);
 }
 
 .product-image-monogram {
-  font-size: 3rem;
-  font-weight: 300;
-  letter-spacing: 0.3em;
-  color: rgba(99, 41, 140, 0.25);
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: rgba(99, 41, 140, 0.28);
 }
 
 .product-image-label {
-  margin-top: 1rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.2em;
-  color: rgba(107, 107, 107, 0.6);
+  margin-top: 0.85rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  color: rgba(107, 107, 107, 0.7);
 }
 
 @media (min-width: 768px) {
   .product-image-monogram {
-    font-size: 4.5rem;
+    font-size: 4rem;
   }
 }
 
@@ -470,71 +625,97 @@ svg {
 .product-card-link {
   display: block;
   color: inherit;
+  border-radius: 0.15rem;
 }
 
 .product-card-media {
   position: relative;
+  overflow: hidden;
+  background-color: var(--color-well);
+}
+
+.product-card-link:hover .ProductImage,
+.product-card-link:hover .product-image-photo {
+  transform: scale(1.03);
 }
 
 .product-card-wishlist {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 0.75rem;
+  right: 0.75rem;
   z-index: 1;
   display: flex;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.82);
   color: var(--color-ink);
-  backdrop-filter: blur(4px);
-  transition: color 150ms ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 
 .product-card-wishlist:hover,
 .product-card-wishlist.is-active {
   color: var(--color-brand);
+  background-color: var(--color-white);
+}
+
+.product-card-wishlist:active {
+  transform: scale(0.96);
 }
 
 .product-card-content {
-  margin-top: 1.25rem;
+  margin-top: 1.1rem;
 }
 
 .product-card-price {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--color-ink);
 }
 
 .product-card-name {
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
   font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
-  transition: color 150ms ease;
+  transition: color var(--duration-fast) ease;
 }
 
 .product-card-description {
-  margin-top: 0.375rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-top: 0.4rem;
+  overflow: hidden;
   font-size: 0.875rem;
+  line-height: 1.55;
   color: var(--color-muted);
 }
 
 .product-card-category {
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.15em;
-  color: rgba(107, 107, 107, 0.7);
+  margin-top: 0.7rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  color: rgba(107, 107, 107, 0.75);
 }
 
 .product-card-action {
   display: inline-block;
-  margin-top: 1rem;
-  font-size: 0.875rem;
+  margin-top: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 500;
+  letter-spacing: 0.04em;
   color: var(--color-brand);
-  transition: color 150ms ease;
+  transition: letter-spacing var(--duration) var(--ease-out);
 }
 
 .ProductCard:hover .product-card-name,
@@ -542,24 +723,32 @@ svg {
   color: var(--color-brand);
 }
 
+.ProductCard:hover .product-card-action {
+  letter-spacing: 0.06em;
+}
+
 /* ---------- Product grid (2-column catalog under the hero) ---------- */
 
 .ProductGrid {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: var(--space-section);
+  padding-bottom: var(--space-section);
   border-top: 1px solid var(--color-hairline);
+  scroll-margin-top: var(--header-height);
 }
 
 .grid-heading {
+  font-family: var(--font-display);
   font-size: 1.875rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--color-ink);
 }
 
 .grid-copy {
-  margin-top: 0.75rem;
-  font-size: 1rem;
+  margin-top: 0.7rem;
+  max-width: 28rem;
+  font-size: 0.975rem;
+  line-height: 1.6;
   color: var(--color-muted);
 }
 
@@ -567,11 +756,11 @@ svg {
   display: grid;
   grid-template-columns: 1fr;
   gap: 2.5rem;
-  margin-top: 2.5rem; 
+  margin-top: 2.5rem;
 }
 
 .ProductGrid .product-card-price {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
 .ProductGrid .product-card-name {
@@ -581,23 +770,23 @@ svg {
 @media (min-width: 640px) {
   .grid-content {
     grid-template-columns: 1fr 1fr;
-    gap: 3rem 1.5rem;
+    gap: 3rem 1.75rem;
   }
 }
 
 @media (min-width: 768px) {
   .ProductGrid {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
+    padding-top: var(--space-section-lg);
+    padding-bottom: var(--space-section-lg);
   }
 
   .grid-heading {
-    font-size: 2.25rem;
+    font-size: 2.35rem;
   }
 
   .grid-content {
     gap: 4rem 2rem;
-    margin-top: 3.5rem;
+    margin-top: 3.25rem;
   }
 }
 
@@ -607,44 +796,65 @@ svg {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: var(--space-section);
+  padding-bottom: var(--space-section);
   background-color: var(--color-wash);
 }
 
 .intro-wrapper {
-  width: 75%;
+  width: 100%;
   text-align: center;
 }
 
+.intro-content {
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.intro-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--color-muted);
+}
+
+.intro-eyebrow::after {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 1px;
+  margin: 0.85rem auto 0;
+  background-color: var(--color-brand);
+}
+
 .intro-heading {
+  margin-top: 1.15rem;
+  font-family: var(--font-display);
   font-size: 1.875rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--color-ink);
 }
 
 .intro-copy {
-  margin-top: 1.5rem;
+  margin-top: 1.35rem;
   font-size: 1rem;
-  line-height: 1.625;
+  line-height: 1.75;
   color: var(--color-muted);
 }
 
 .intro-button {
-  margin-top: 2.5rem;
-  padding: 0.875rem 2rem;
-  font-size: 0.875rem;
+  margin-top: 2.25rem;
 }
 
 @media (min-width: 768px) {
   .BrandIntro {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
+    padding-top: var(--space-section-lg);
+    padding-bottom: var(--space-section-lg);
   }
 
   .intro-heading {
-    font-size: 2.25rem;
+    font-size: 2.35rem;
   }
 
   .intro-copy {
@@ -655,44 +865,55 @@ svg {
 /* ---------- Brand page ---------- */
 
 .BrandPage {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  min-height: calc(100vh - var(--header-height) - 10rem);
+  padding-top: var(--space-section);
+  padding-bottom: 8rem;
 }
 
 .brand-page-wrapper {
-  max-width: 80%;
+  max-width: 40rem;
 }
 
 .brand-page-eyebrow {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   color: var(--color-muted);
 }
 
+.brand-page-eyebrow::after {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 1px;
+  margin-top: 0.85rem;
+  background-color: var(--color-brand);
+}
+
 .brand-page-heading {
-  margin-top: 0.75rem;
+  margin-top: 1.15rem;
+  font-family: var(--font-display);
   font-size: 1.875rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--color-ink);
 }
 
 .brand-page-copy {
   margin-top: 1.5rem;
   font-size: 1rem;
-  line-height: 1.625;
+  line-height: 1.8;
   color: var(--color-muted);
 }
 
 @media (min-width: 768px) {
   .BrandPage {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
+    padding-top: var(--space-section-lg);
+    padding-bottom: 9rem;
   }
 
   .brand-page-heading {
-    font-size: 2.25rem;
+    font-size: 2.35rem;
   }
 
   .brand-page-copy {
@@ -722,20 +943,25 @@ svg {
   left: 1rem;
   z-index: 1;
   display: inline-flex;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.5rem 0.9rem 0.5rem 0.7rem;
+  gap: 0.3rem;
+  padding: 0.5rem 0.95rem 0.5rem 0.7rem;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.86);
   color: var(--color-ink);
-  font-size: 0.875rem;
-  backdrop-filter: blur(4px);
-  transition: color 150ms ease;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
 }
 
 .product-page-back:hover {
   color: var(--color-brand);
+  background-color: var(--color-white);
 }
 
 .product-page-banner {
@@ -753,27 +979,27 @@ svg {
   padding: 2rem 1.5rem;
   background: linear-gradient(
     to top,
-    rgba(0, 0, 0, 0.45),
-    rgba(0, 0, 0, 0.08),
-    transparent
+    rgba(18, 8, 26, 0.58),
+    rgba(18, 8, 26, 0.12),
+    transparent 62%
   );
 }
 
 .product-page-banner-eyebrow {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.22em;
+  color: var(--color-cream-soft);
 }
 
 .product-page-banner-copy {
-  margin-top: 0.75rem;
+  margin-top: 0.7rem;
   white-space: pre-line;
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.025em;
-  color: var(--color-white);
+  color: var(--color-cream);
 }
 
 .product-page-info {
@@ -783,7 +1009,12 @@ svg {
 
 .product-page-breadcrumb {
   font-size: 0.8125rem;
+  letter-spacing: 0.01em;
   color: var(--color-muted);
+}
+
+.product-page-breadcrumb a {
+  transition: color var(--duration-fast) ease;
 }
 
 .product-page-breadcrumb a:hover {
@@ -791,17 +1022,17 @@ svg {
 }
 
 .product-page-category {
-  margin-top: 1.5rem;
-  font-size: 0.75rem;
+  margin-top: 1.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.18em;
   color: var(--color-muted);
 }
 
 .product-page-name {
-  margin-top: 0.75rem;
+  margin-top: 0.65rem;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--color-ink);
 }
@@ -809,44 +1040,47 @@ svg {
 .product-page-tagline {
   margin-top: 0.75rem;
   white-space: pre-line;
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--color-ink);
 }
 
 .product-page-description {
   margin-top: 1.25rem;
   font-size: 0.9375rem;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--color-muted);
 }
 
 .product-page-story {
-  margin-top: 1rem;
+  margin-top: 0.9rem;
   font-size: 0.9375rem;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--color-muted);
 }
 
 .product-page-price {
   margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-hairline);
   font-size: 1.5rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--color-ink);
 }
 
 .product-page-actions {
   display: flex;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+  margin-top: 1.35rem;
 }
 
 .product-page-buy,
 .product-page-cart {
   flex: 1;
   padding: 0.95rem 1.25rem;
-  font-size: 1rem;
+  font-size: 0.9375rem;
 }
 
 .ProductReviews {
@@ -858,7 +1092,7 @@ svg {
 
 .reviews-heading {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--color-ink);
 }
@@ -887,14 +1121,14 @@ svg {
 
 .reviews-content {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
   margin-top: 2rem;
 }
 
 .ReviewCard {
-  padding: 1.25rem 1.5rem;
+  padding: 1.35rem 1.4rem;
   border: 1px solid var(--color-hairline);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background-color: var(--color-white);
 }
 
@@ -926,13 +1160,13 @@ svg {
 .review-card-body {
   margin-top: 0.5rem;
   font-size: 0.9375rem;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--color-muted);
 }
 
 .StarRating {
   display: inline-flex;
-  gap: 0.15rem;
+  gap: 0.12rem;
   color: var(--color-brand);
 }
 
@@ -943,13 +1177,13 @@ svg {
 
 .ProductRecommend {
   padding-top: 4rem;
-  padding-bottom: 5rem;
+  padding-bottom: var(--space-section);
   border-top: 1px solid var(--color-hairline);
 }
 
 .recommend-heading {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--color-ink);
 }
@@ -957,7 +1191,7 @@ svg {
 .recommend-content {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1.75rem;
   margin-top: 2rem;
 }
 
@@ -989,8 +1223,8 @@ svg {
   }
 
   .ProductReviews {
-    padding-top: 5rem;
-    padding-bottom: 5rem;
+    padding-top: var(--space-section);
+    padding-bottom: var(--space-section);
   }
 
   .reviews-heading {
@@ -998,8 +1232,8 @@ svg {
   }
 
   .ProductRecommend {
-    padding-top: 5rem;
-    padding-bottom: 7rem;
+    padding-top: var(--space-section);
+    padding-bottom: var(--space-section-lg);
   }
 
   .recommend-heading {
@@ -1023,10 +1257,11 @@ svg {
 
   .product-page-info {
     position: sticky;
-    top: 4rem;
+    top: var(--header-height);
     border-top: none;
-    padding: 2.5rem 2.5rem 4rem 2rem;
-    min-height: calc(100vh - 4rem);
+    border-left: 1px solid var(--color-hairline);
+    padding: 2.75rem 2.75rem 4rem 2.25rem;
+    min-height: calc(100vh - var(--header-height));
   }
 
   .recommend-content {
@@ -1040,35 +1275,63 @@ svg {
 
 .Footer {
   border-top: 1px solid var(--color-hairline);
-  padding-top: 3rem;
-  padding-bottom: 3rem;
+  background-color: var(--color-wash);
+  padding-top: 3.25rem;
+  padding-bottom: 2.5rem;
 }
 
 .footer-content {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
 
 .footer-title {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--color-brand);
 }
 
 .footer-copy {
-  margin-top: 0.5rem;
+  margin-top: 0.55rem;
+  max-width: 22rem;
   font-size: 0.875rem;
+  line-height: 1.55;
   color: var(--color-muted);
+}
+
+.footer-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.85rem;
+}
+
+.footer-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+}
+
+.footer-link {
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  transition: color var(--duration-fast) ease;
+}
+
+.footer-link:hover {
+  color: var(--color-brand);
 }
 
 .footer-legal {
   margin: 0;
   font-size: 0.75rem;
-  color: rgba(107, 107, 107, 0.7);
+  letter-spacing: 0.01em;
+  color: rgba(107, 107, 107, 0.75);
   flex-shrink: 0;
 }
 
@@ -1076,5 +1339,23 @@ svg {
   .footer-content {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .footer-aside {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
