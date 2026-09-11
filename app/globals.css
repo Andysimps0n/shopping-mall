@@ -715,6 +715,30 @@ svg {
   flex-direction: column;
 }
 
+/*
+  On small screens the long banner would push price / 구매하기 below
+  the entire story. Flatten the gallery so we can reorder:
+  product photo → buy column → storytelling banner.
+*/
+@media (max-width: 1023px) {
+  .product-page-gallery {
+    display: contents;
+  }
+
+  .product-page-media {
+    order: 1;
+  }
+
+  .product-page-info {
+    order: 2;
+  }
+
+  .ProductDetailBanner,
+  .product-page-banner {
+    order: 3;
+  }
+}
+
 .product-page-media {
   position: relative;
 }
@@ -1154,6 +1178,8 @@ svg {
 }
 
 .banner-pillar {
+  display: flex;
+  flex-direction: column;
   padding: 1.5rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
@@ -1212,15 +1238,24 @@ svg {
   color: var(--color-brand);
 }
 
+.banner-highlight:not(:last-child)::after {
+  content: "·";
+  margin-left: 1.25rem;
+  color: var(--color-muted);
+}
+
 .banner-free-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
   margin-top: 1.75rem;
+  max-width: 40rem;
   border-top: 1px solid var(--color-hairline);
 }
 
 .banner-free-item {
+  display: flex;
+  flex-direction: column;
   padding: 1.35rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
@@ -1375,6 +1410,7 @@ svg {
   max-width: 40rem;
   font-size: 0.875rem;
   line-height: 1.85;
+  overflow-wrap: break-word;
   color: var(--color-muted);
 }
 
@@ -1411,11 +1447,6 @@ svg {
   .banner-pillar:nth-child(even) {
     padding-left: 1.5rem;
     padding-right: 0;
-  }
-
-  .banner-free-list {
-    grid-template-columns: 1fr 1fr;
-    column-gap: 2.5rem;
   }
 
   .banner-stats {
