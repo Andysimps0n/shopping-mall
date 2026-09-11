@@ -2,8 +2,9 @@
  * Long-form product story that sits under the gallery image.
  *
  * This component is data-driven: it only renders when `banner` is passed in.
- * ProductDetail looks the content up by product id, so other catalog items
- * can get a banner later without changing this layout.
+ * ProductDetail looks the content up by product id. Each product can include
+ * only the sections it has copy for — missing arrays are skipped, so a mist
+ * does not have to fake a survey block just because the shampoo has one.
  *
  * @param {object} props
  * @param {object} props.product
@@ -11,6 +12,24 @@
  * @param {string} [props.imageSrc] Real photo path, if one exists in /public.
  */
 export default function ProductDetailBanner({ product, banner, imageSrc }) {
+  const hasPillars = hasItems(banner.pillars);
+  const hasSymptoms = hasItems(banner.symptoms);
+  const hasFree = hasItems(banner.freeItems);
+  const hasPoints = hasItems(banner.points);
+  const hasScience = Boolean(banner.scienceHeading);
+  const hasStats = hasItems(banner.stats);
+  const hasHow =
+    hasItems(banner.howSteps) || hasItems(banner.howGroups);
+  const hasCautions = hasItems(banner.cautions);
+  const hasIngredients = Boolean(banner.ingredients);
+  const hasGuide = hasHow || hasCautions || hasIngredients;
+
+  const guideHeadingId = hasHow
+    ? "banner-how-heading"
+    : hasCautions
+      ? "banner-caution-heading"
+      : "banner-ingredients-heading";
+
   return (
     <article
       className="ProductDetailBanner"
@@ -18,6 +37,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
     >
       <section className="banner-block banner-hero">
         <p className="banner-kicker">{banner.kicker}</p>
+        <p className="banner-product-name">{product.name}</p>
         <h2 id="banner-hero-heading" className="banner-heading">
           {splitLines(banner.heading)}
         </h2>
@@ -34,156 +54,262 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
         ) : null}
       </section>
 
-      <section
-        className="banner-block"
-        aria-labelledby="banner-pillars-heading"
-      >
-        <h3 id="banner-pillars-heading" className="banner-subheading">
-          네 가지 케어
-        </h3>
-        <ul className="banner-pillars">
-          {banner.pillars.map((pillar, index) => (
-            <li key={pillar.title} className="banner-pillar">
-              <p className="banner-pillar-index">
-                {String(index + 1).padStart(2, "0")}
-              </p>
-              <h4 className="banner-pillar-title">{pillar.title}</h4>
-              <p className="banner-pillar-copy">{pillar.copy}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {hasPillars ? (
+        <section
+          className="banner-block"
+          aria-labelledby="banner-pillars-heading"
+        >
+          <h3 id="banner-pillars-heading" className="banner-subheading">
+            {banner.pillarsHeading}
+          </h3>
+          <ul className="banner-pillars">
+            {banner.pillars.map((pillar, index) => (
+              <li key={pillar.title} className="banner-pillar">
+                <p className="banner-pillar-index">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <h4 className="banner-pillar-title">{pillar.title}</h4>
+                <p className="banner-pillar-copy">{pillar.copy}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
-      <section
-        className="banner-block banner-block--wash"
-        aria-labelledby="banner-symptoms-heading"
-      >
-        <h3 id="banner-symptoms-heading" className="banner-heading banner-heading--sm">
-          {splitLines(banner.symptomsHeading)}
-        </h3>
-        <p className="banner-copy">{banner.symptomsLead}</p>
-        <ul className="banner-symptoms">
-          {banner.symptoms.map((symptom) => (
-            <li key={symptom}>{symptom}</li>
-          ))}
-        </ul>
-      </section>
+      {hasSymptoms ? (
+        <section
+          className="banner-block banner-block--wash"
+          aria-labelledby="banner-symptoms-heading"
+        >
+          <h3
+            id="banner-symptoms-heading"
+            className="banner-heading banner-heading--sm"
+          >
+            {splitLines(banner.symptomsHeading)}
+          </h3>
+          {banner.symptomsLead ? (
+            <p className="banner-copy">{banner.symptomsLead}</p>
+          ) : null}
+          <ul className="banner-symptoms">
+            {banner.symptoms.map((symptom) => (
+              <li key={symptom}>{symptom}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
-      <section
-        className="banner-block"
-        aria-labelledby="banner-free-heading"
-      >
-        <h3 id="banner-free-heading" className="banner-heading banner-heading--sm">
-          {splitLines(banner.freeHeading)}
-        </h3>
-        <p className="banner-copy">{banner.freeLead}</p>
-        <p className="banner-highlights">
-          {banner.freeHighlights.map((item) => (
-            <span key={item} className="banner-highlight">
-              {item}
-            </span>
-          ))}
-        </p>
-        <ul className="banner-free-list">
-          {banner.freeItems.map((item) => (
-            <li key={item.title} className="banner-free-item">
-              <h4 className="banner-free-title">{item.title}</h4>
-              <p className="banner-free-copy">{item.copy}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {hasFree ? (
+        <section
+          className="banner-block"
+          aria-labelledby="banner-free-heading"
+        >
+          <h3
+            id="banner-free-heading"
+            className="banner-heading banner-heading--sm"
+          >
+            {splitLines(banner.freeHeading)}
+          </h3>
+          {banner.freeLead ? (
+            <p className="banner-copy">{banner.freeLead}</p>
+          ) : null}
+          {hasItems(banner.freeHighlights) ? (
+            <p className="banner-highlights">
+              {banner.freeHighlights.map((item) => (
+                <span key={item} className="banner-highlight">
+                  {item}
+                </span>
+              ))}
+            </p>
+          ) : null}
+          <ul className="banner-free-list">
+            {banner.freeItems.map((item) => (
+              <li key={item.title} className="banner-free-item">
+                <h4 className="banner-free-title">{item.title}</h4>
+                <p className="banner-free-copy">{item.copy}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
-      <section
-        className="banner-block banner-block--wash"
-        aria-labelledby="banner-points-heading"
-      >
-        <h3 id="banner-points-heading" className="banner-heading banner-heading--sm">
-          {splitLines(banner.pointsHeading)}
-        </h3>
-        <p className="banner-copy">{banner.pointsLead}</p>
-        <ol className="banner-points">
-          {banner.points.map((point) => (
-            <li key={point.index} className="banner-point">
-              <p className="banner-point-index" aria-hidden="true">
-                {point.index}
-              </p>
-              <div>
-                <h4 className="banner-point-title">{point.title}</h4>
-                <p className="banner-point-copy">{point.copy}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+      {hasPoints ? (
+        <section
+          className="banner-block banner-block--wash"
+          aria-labelledby="banner-points-heading"
+        >
+          <h3
+            id="banner-points-heading"
+            className="banner-heading banner-heading--sm"
+          >
+            {splitLines(banner.pointsHeading)}
+          </h3>
+          {banner.pointsLead ? (
+            <p className="banner-copy">{banner.pointsLead}</p>
+          ) : null}
+          <ol className="banner-points">
+            {banner.points.map((point) => (
+              <li key={point.index} className="banner-point">
+                <p className="banner-point-index" aria-hidden="true">
+                  {point.index}
+                </p>
+                <div>
+                  <h4 className="banner-point-title">{point.title}</h4>
+                  <p className="banner-point-copy">{point.copy}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
-      <section
-        className="banner-block banner-block--ink"
-        aria-labelledby="banner-science-heading"
-      >
-        <p className="banner-kicker banner-kicker--on-ink">{banner.scienceKicker}</p>
-        <h3 id="banner-science-heading" className="banner-heading banner-heading--on-ink">
-          {banner.scienceHeading}
-        </h3>
-        <p className="banner-lead banner-lead--on-ink">{banner.scienceLead}</p>
-        {banner.scienceCopy.map((paragraph) => (
-          <p key={paragraph} className="banner-copy banner-copy--on-ink">
-            {paragraph}
-          </p>
-        ))}
-        <p className="banner-footnote">{banner.scienceFootnote}</p>
-      </section>
+      {hasScience ? (
+        <section
+          className="banner-block banner-block--ink"
+          aria-labelledby="banner-science-heading"
+        >
+          {banner.scienceKicker ? (
+            <p className="banner-kicker banner-kicker--on-ink">
+              {banner.scienceKicker}
+            </p>
+          ) : null}
+          <h3
+            id="banner-science-heading"
+            className="banner-heading banner-heading--on-ink"
+          >
+            {banner.scienceHeading}
+          </h3>
+          {banner.scienceLead ? (
+            <p className="banner-lead banner-lead--on-ink">
+              {banner.scienceLead}
+            </p>
+          ) : null}
+          {hasItems(banner.scienceCopy)
+            ? banner.scienceCopy.map((paragraph) => (
+                <p key={paragraph} className="banner-copy banner-copy--on-ink">
+                  {paragraph}
+                </p>
+              ))
+            : null}
+          {banner.scienceFootnote ? (
+            <p className="banner-footnote">{banner.scienceFootnote}</p>
+          ) : null}
+        </section>
+      ) : null}
 
-      <section
-        className="banner-block"
-        aria-labelledby="banner-stats-heading"
-      >
-        <h3 id="banner-stats-heading" className="banner-heading banner-heading--sm">
-          {splitLines(banner.statsHeading)}
-        </h3>
-        <p className="banner-copy">{banner.statsLead}</p>
-        <ul className="banner-stats">
-          {banner.stats.map((stat) => (
-            <li key={stat.label} className="banner-stat">
-              <p className="banner-stat-value">{stat.value}</p>
-              <p className="banner-stat-label">{stat.label}</p>
-            </li>
-          ))}
-        </ul>
-        <p className="banner-caption">{banner.statsCaption}</p>
-      </section>
+      {hasStats ? (
+        <section
+          className="banner-block"
+          aria-labelledby="banner-stats-heading"
+        >
+          <h3
+            id="banner-stats-heading"
+            className="banner-heading banner-heading--sm"
+          >
+            {splitLines(banner.statsHeading)}
+          </h3>
+          {banner.statsLead ? (
+            <p className="banner-copy">{banner.statsLead}</p>
+          ) : null}
+          <ul className="banner-stats">
+            {banner.stats.map((stat) => (
+              <li key={stat.label} className="banner-stat">
+                <p className="banner-stat-value">{stat.value}</p>
+                <p className="banner-stat-label">{stat.label}</p>
+              </li>
+            ))}
+          </ul>
+          {banner.statsCaption ? (
+            <p className="banner-caption">{banner.statsCaption}</p>
+          ) : null}
+        </section>
+      ) : null}
 
-      <section
-        className="banner-block banner-block--wash banner-guide"
-        aria-labelledby="banner-how-heading"
-      >
-        <h3 id="banner-how-heading" className="banner-heading banner-heading--sm">
-          {banner.howHeading}
-        </h3>
-        <p className="banner-note">{banner.howNote}</p>
-        <ol className="banner-steps">
-          {banner.howSteps.map((step, index) => (
-            <li key={step} className="banner-step">
-              <span className="banner-step-index" aria-hidden="true">
-                {index + 1}
-              </span>
-              <p>{step}</p>
-            </li>
-          ))}
-        </ol>
+      {hasGuide ? (
+        <section
+          className="banner-block banner-block--wash banner-guide"
+          aria-labelledby={guideHeadingId}
+        >
+          {hasHow ? (
+            <>
+              <h3
+                id="banner-how-heading"
+                className="banner-heading banner-heading--sm"
+              >
+                {banner.howHeading}
+              </h3>
+              {banner.howNote ? (
+                <p className="banner-note">{banner.howNote}</p>
+              ) : null}
+              {hasItems(banner.howGroups)
+                ? banner.howGroups.map((group) => (
+                    <div key={group.title} className="banner-how-group">
+                      <h4 className="banner-how-group-title">{group.title}</h4>
+                      {group.note ? (
+                        <p className="banner-copy">{group.note}</p>
+                      ) : null}
+                      <ol className="banner-steps">
+                        {group.steps.map((step, index) => (
+                          <li
+                            key={`${group.title}-${index}`}
+                            className="banner-step"
+                          >
+                            <span className="banner-step-index" aria-hidden="true">
+                              {index + 1}
+                            </span>
+                            <p>{step}</p>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))
+                : null}
+              {hasItems(banner.howSteps) ? (
+                <ol className="banner-steps">
+                  {banner.howSteps.map((step, index) => (
+                    <li key={step} className="banner-step">
+                      <span className="banner-step-index" aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      <p>{step}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </>
+          ) : null}
 
-        <h3 className="banner-guide-heading">{banner.cautionHeading}</h3>
-        <ul className="banner-cautions">
-          {banner.cautions.map((caution) => (
-            <li key={caution}>{caution}</li>
-          ))}
-        </ul>
+          {hasCautions ? (
+            <>
+              <h3 id="banner-caution-heading" className="banner-guide-heading">
+                {banner.cautionHeading}
+              </h3>
+              <ul className="banner-cautions">
+                {banner.cautions.map((caution) => (
+                  <li key={caution}>{caution}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
 
-        <h3 className="banner-guide-heading">{banner.ingredientsHeading}</h3>
-        <p className="banner-ingredients">{banner.ingredients}</p>
-      </section>
+          {hasIngredients ? (
+            <>
+              <h3
+                id="banner-ingredients-heading"
+                className="banner-guide-heading"
+              >
+                {banner.ingredientsHeading}
+              </h3>
+              <p className="banner-ingredients">{banner.ingredients}</p>
+            </>
+          ) : null}
+        </section>
+      ) : null}
     </article>
   );
+}
+
+function hasItems(items) {
+  return Array.isArray(items) && items.length > 0;
 }
 
 // Headlines in the data file use \n so a designer can control line breaks
