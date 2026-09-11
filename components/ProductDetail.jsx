@@ -1,17 +1,26 @@
 import Link from "next/link";
 import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
+import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
 import ProductReviews from "./ProductReviews";
-import { formatPrice } from "@/lib/products";
+import { getProductBanner } from "@/lib/productBanners";
+import { formatPrice, getProductPhotoSrc } from "@/lib/products";
 
 /**
  * Product detail layout:
  * - Left column (majority of the width): large product image, then a long banner.
  * - Right column: name, story, price, buy button. Stays sticky while you scroll.
  * - Below: customer reviews, then four recommended product cards.
+ *
+ * The long banner is opt-in per product. If `getProductBanner(id)` returns
+ * content, we render the editorial story. Otherwise we keep the short
+ * placeholder so other PDPs are unchanged.
  */
 export default function ProductDetail({ product, recommended, reviews }) {
+  const banner = getProductBanner(product.id);
+  const imageSrc = getProductPhotoSrc(product);
+
   return (
     <main className="ProductPage">
       <section className="product-page-layout" aria-labelledby="product-name">
@@ -21,21 +30,30 @@ export default function ProductDetail({ product, recommended, reviews }) {
             <ProductImage
               name={product.name}
               categoryLabel={product.categoryLabel}
+              src={imageSrc}
               size="detail"
             />
           </div>
 
-          <div className="product-page-banner">
-            <ProductImage
-              name={product.name}
-              categoryLabel={product.categoryLabel}
-              size="banner"
+          {banner ? (
+            <ProductDetailBanner
+              product={product}
+              banner={banner}
+              imageSrc={imageSrc}
             />
-            <div className="product-page-banner-content">
-              <p className="product-page-banner-eyebrow">AnnChloe</p>
-              <p className="product-page-banner-copy">{product.tagline}</p>
+          ) : (
+            <div className="product-page-banner">
+              <ProductImage
+                name={product.name}
+                categoryLabel={product.categoryLabel}
+                size="banner"
+              />
+              <div className="product-page-banner-content">
+                <p className="product-page-banner-eyebrow">AnnChloe</p>
+                <p className="product-page-banner-copy">{product.tagline}</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <aside className="product-page-info">
