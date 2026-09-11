@@ -73,6 +73,7 @@ body {
 h1,
 h2,
 h3,
+h4,
 p {
   margin: 0;
 }
@@ -435,6 +436,8 @@ svg {
 /* Real product photo: fill the parent box. Bottle shots are often
    landscape with the product on the right, so pin focus to the right. */
 .product-image-photo {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -710,6 +713,30 @@ svg {
 .product-page-gallery {
   display: flex;
   flex-direction: column;
+}
+
+/*
+  On small screens the long banner would push price / 구매하기 below
+  the entire story. Flatten the gallery so we can reorder:
+  product photo → buy column → storytelling banner.
+*/
+@media (max-width: 1023px) {
+  .product-page-gallery {
+    display: contents;
+  }
+
+  .product-page-media {
+    order: 1;
+  }
+
+  .product-page-info {
+    order: 2;
+  }
+
+  .ProductDetailBanner,
+  .product-page-banner {
+    order: 3;
+  }
 }
 
 .product-page-media {
@@ -1033,6 +1060,419 @@ svg {
     grid-template-columns: repeat(4, 1fr);
     gap: 1.75rem;
     margin-top: 2.5rem;
+  }
+}
+
+/* ---------- Product detail banner (long-form story under the gallery) ---------- */
+
+.ProductDetailBanner {
+  background-color: var(--color-white);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.ProductDetailBanner ul,
+.ProductDetailBanner ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.banner-block {
+  padding: 3rem 1.5rem;
+}
+
+.banner-block + .banner-block {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.banner-block--wash {
+  background-color: var(--color-wash);
+}
+
+.banner-block--ink {
+  background-color: #24152e;
+  border-top-color: transparent;
+}
+
+.banner-kicker {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--color-brand);
+}
+
+.banner-kicker--on-ink {
+  color: #d4b8e4;
+}
+
+.banner-heading {
+  margin-top: 0.85rem;
+  max-width: 22em;
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+}
+
+.banner-heading--sm {
+  font-size: 1.45rem;
+}
+
+.banner-heading--on-ink {
+  color: var(--color-cream);
+}
+
+.banner-heading-line {
+  display: block;
+}
+
+.banner-subheading {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--color-muted);
+}
+
+.banner-copy,
+.banner-lead {
+  margin-top: 1.25rem;
+  max-width: 38rem;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+
+.banner-lead {
+  font-size: 1.0625rem;
+  color: var(--color-ink);
+}
+
+.banner-copy--on-ink,
+.banner-lead--on-ink {
+  color: var(--color-cream-soft);
+}
+
+.banner-lead--on-ink {
+  color: var(--color-cream);
+}
+
+.banner-hero-media {
+  margin: 2.25rem 0 0;
+}
+
+.banner-hero-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: right center;
+  background-color: var(--color-well);
+}
+
+.banner-pillars {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.banner-pillar {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.banner-pillar-index {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--color-brand);
+}
+
+.banner-pillar-title {
+  margin-top: 0.4rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.banner-pillar-copy {
+  margin-top: 0.45rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.banner-symptoms {
+  margin-top: 1.75rem;
+  max-width: 38rem;
+}
+
+.banner-symptoms li {
+  padding: 0.9rem 0 0.9rem 1rem;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+  box-shadow: inset 2px 0 0 var(--color-brand);
+}
+
+.banner-symptoms li:first-child {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.banner-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.banner-highlight {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-brand);
+}
+
+.banner-highlight:not(:last-child)::after {
+  content: "·";
+  margin-left: 1.25rem;
+  color: var(--color-muted);
+}
+
+.banner-free-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 1.75rem;
+  max-width: 40rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.banner-free-item {
+  display: flex;
+  flex-direction: column;
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.banner-free-title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.banner-free-copy {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.banner-points {
+  margin-top: 2rem;
+  max-width: 40rem;
+}
+
+.banner-point {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.banner-point:first-child {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.banner-point-index {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-brand);
+}
+
+.banner-point-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.banner-point-copy {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.banner-footnote {
+  margin-top: 1.5rem;
+  max-width: 38rem;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: rgba(228, 217, 200, 0.78);
+}
+
+.banner-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem 1rem;
+  margin-top: 2rem;
+}
+
+.banner-stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-brand);
+}
+
+.banner-stat-label {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.banner-caption {
+  margin-top: 1.5rem;
+  max-width: 38rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+.banner-note {
+  margin-top: 1.25rem;
+  max-width: 38rem;
+  padding: 1rem 1.1rem;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-hairline);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.banner-steps {
+  margin-top: 1.5rem;
+  max-width: 40rem;
+}
+
+.banner-step {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.banner-step-index {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-brand);
+}
+
+.banner-guide-heading {
+  margin-top: 2.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--color-muted);
+}
+
+.banner-cautions {
+  margin-top: 0.85rem;
+  max-width: 40rem;
+}
+
+.banner-cautions li {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.banner-ingredients {
+  margin-top: 0.85rem;
+  max-width: 40rem;
+  font-size: 0.875rem;
+  line-height: 1.85;
+  overflow-wrap: break-word;
+  color: var(--color-muted);
+}
+
+@media (min-width: 640px) {
+  .banner-block {
+    padding: 3.75rem 2rem;
+  }
+
+  .banner-heading {
+    font-size: 2rem;
+  }
+
+  .banner-heading--sm {
+    font-size: 1.75rem;
+  }
+
+  .banner-hero-photo {
+    aspect-ratio: 16 / 10;
+  }
+
+  .banner-pillars {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .banner-pillar {
+    padding: 1.5rem 1.25rem 1.5rem 0;
+  }
+
+  .banner-pillar:nth-child(odd) {
+    padding-right: 1.5rem;
+    border-right: 1px solid var(--color-hairline);
+  }
+
+  .banner-pillar:nth-child(even) {
+    padding-left: 1.5rem;
+    padding-right: 0;
+  }
+
+  .banner-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem 1.5rem;
+  }
+
+  .banner-stat-value {
+    font-size: 2.35rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .banner-block {
+    padding: 4.5rem 2.5rem;
+  }
+
+  .banner-copy,
+  .banner-lead {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .banner-block {
+    padding: 4.75rem 2.75rem;
   }
 }
 
