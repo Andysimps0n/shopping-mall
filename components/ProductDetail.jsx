@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
+import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
 import ProductReviews from "./ProductReviews";
 import { formatPrice, getProductImageSrc } from "@/lib/products";
@@ -27,16 +28,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
           </div>
 
           <div className="product-page-banner">
-            <ProductImage
-              name={product.name}
-              categoryLabel={product.categoryLabel}
-              src={getProductImageSrc(product)}
-              size="banner"
-            />
-            <div className="product-page-banner-content">
-              <p className="product-page-banner-eyebrow">AnnChloe</p>
-              <p className="product-page-banner-copy">{product.tagline}</p>
-            </div>
+            <ProductDetailBanner product={product} />
           </div>
         </div>
 
