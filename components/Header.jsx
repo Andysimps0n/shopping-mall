@@ -113,14 +113,18 @@ export default function Header() {
       <div className="header-wrapper container">
         <BrandLogo />
 
-        <nav className="header-content">
+        <nav className="header-content" aria-label="주요 메뉴">
           <Link href="/#collection" className="header-link">
             헤어 케어
           </Link>
           <Link href="/#collection" className="header-link">
             피부 케어
           </Link>
-          <Link href="/brand" className="header-link">
+          <Link
+            href="/brand"
+            className="header-link"
+            aria-current={pathname === "/brand" ? "page" : undefined}
+          >
             브랜드
           </Link>
         </nav>

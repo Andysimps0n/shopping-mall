@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getProductImageSrc } from "@/lib/products";
 
 // A thin-line heart used for the wishlist toggle. Fills with the brand color
 // when active. This is UI only — nothing is persisted.
@@ -44,6 +44,7 @@ export default function ProductCard({ product, compact = false }) {
           <ProductImage
             name={product.name}
             categoryLabel={product.categoryLabel}
+            src={getProductImageSrc(product)}
           />
         </div>
 

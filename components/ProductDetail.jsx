@@ -1,9 +1,10 @@
 import Link from "next/link";
 import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
+import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
 import ProductReviews from "./ProductReviews";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getProductImageSrc } from "@/lib/products";
 
 /**
  * Product detail layout:
@@ -21,27 +22,20 @@ export default function ProductDetail({ product, recommended, reviews }) {
             <ProductImage
               name={product.name}
               categoryLabel={product.categoryLabel}
+              src={getProductImageSrc(product)}
               size="detail"
             />
           </div>
 
           <div className="product-page-banner">
-            <ProductImage
-              name={product.name}
-              categoryLabel={product.categoryLabel}
-              size="banner"
-            />
-            <div className="product-page-banner-content">
-              <p className="product-page-banner-eyebrow">AnnChloe</p>
-              <p className="product-page-banner-copy">{product.tagline}</p>
-            </div>
+            <ProductDetailBanner product={product} />
           </div>
         </div>
 
         <aside className="product-page-info">
           <div className="product-page-info-content">
             <nav className="product-page-breadcrumb" aria-label="경로">
-              <Link href="/">Home</Link>
+              <Link href="/">홈</Link>
               <span aria-hidden="true"> / </span>
               <Link href="/#collection">{product.categoryLabel}</Link>
             </nav>

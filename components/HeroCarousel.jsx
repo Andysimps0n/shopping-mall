@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
-import { formatPrice, products } from "@/lib/products";
+import { formatPrice, getProductImageSrc, products } from "@/lib/products";
 
 export default function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -35,28 +35,26 @@ export default function HeroCarousel() {
         // Only pass a real photo when the file actually exists in /public.
         // Other catalog entries still point at missing .jpg files, so keep
         // those as placeholders until their photos are added.
-        src={
-          activeProduct.image === "/products/shampoo_sixteen_3.png"
-            ? activeProduct.image
-            : undefined
-        }
+        src={getProductImageSrc(activeProduct)}
         cover
       />
 
       <div className="hero-overlay" aria-hidden="true" />
 
       <div className="hero-wrapper container">
-        <div className="hero-content">
+        <div className="hero-content" key={activeProduct.id} aria-live="polite">
+          <p className="hero-category">{activeProduct.categoryLabel}</p>
 
           <h1 className="hero-title">{activeProduct.tagline}</h1>
 
-          <p className="hero-name">{activeProduct.name}</p>
-
-          <p className="hero-price">{formatPrice(activeProduct.price)}</p>
+          <div className="hero-meta">
+            <p className="hero-name">{activeProduct.name}</p>
+            <p className="hero-price">{formatPrice(activeProduct.price)}</p>
+          </div>
 
           <Link
             href={`/products/${activeProduct.id}`}
-            className="button hero-button"
+            className="button button--on-dark hero-button"
           >
             구매하기
           </Link>
