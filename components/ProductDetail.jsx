@@ -14,8 +14,8 @@ import { formatPrice, getProductPhotoSrc } from "@/lib/products";
  * - Below: customer reviews, then four recommended product cards.
  *
  * The long banner is opt-in per product. If `getProductBanner(id)` returns
- * content, we render the editorial story. Otherwise we keep the short
- * placeholder so other PDPs are unchanged.
+ * content, we render the editorial story. Products without an entry keep
+ * the short placeholder. Each banner can skip sections it has no copy for.
  */
 export default function ProductDetail({ product, recommended, reviews }) {
   const banner = getProductBanner(product.id);
