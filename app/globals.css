@@ -1101,6 +1101,14 @@ svg {
   color: var(--color-brand);
 }
 
+.banner-product-name {
+  margin-top: 0.55rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
 .banner-kicker--on-ink {
   color: #d4b8e4;
 }
@@ -1360,6 +1368,22 @@ svg {
   font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--color-ink);
+}
+
+.banner-how-group {
+  margin-top: 1.85rem;
+  max-width: 40rem;
+}
+
+.banner-how-group-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.banner-how-group .banner-steps {
+  margin-top: 0.65rem;
 }
 
 .banner-steps {
