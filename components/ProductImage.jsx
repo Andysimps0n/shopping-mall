@@ -11,6 +11,7 @@
  * @param {string} [props.src] Real image path (e.g. "/products/foo.png"). Omit for placeholder.
  * @param {boolean} [props.cover] When true, fill the parent edge-to-edge (hero cover mode).
  * @param {"card" | "cover" | "detail" | "banner"} [props.size]
+ * @param {"eager" | "lazy"} [props.loading] Native img loading hint.
  */
 export default function ProductImage({
   name,
@@ -18,6 +19,7 @@ export default function ProductImage({
   src,
   cover = false,
   size,
+  loading,
 }) {
   const resolvedSize = size ?? (cover ? "cover" : "card");
   const className = `ProductImage ProductImage--${resolvedSize}`;
@@ -30,6 +32,7 @@ export default function ProductImage({
           src={src}
           alt={`${name} 제품 이미지`}
           className="product-image-photo"
+          loading={loading}
         />
       </div>
     );

@@ -1,9 +1,11 @@
 import ProductCard from "./ProductCard";
-import { products } from "@/lib/products";
+import { getCollectionSections } from "@/lib/products";
 
-// Home catalog under the hero: two large cards per row so shoppers can
-// scan the full collection without scrolling sideways.
+// Home catalog under the hero. Products are split into the same two
+// groups as the header: 헤어 케어 and 피부 케어.
 export default function ProductGrid() {
+  const sections = getCollectionSections();
+
   return (
     <section id="collection" className="ProductGrid" aria-labelledby="grid-heading">
       <div className="grid-wrapper container">
@@ -11,14 +13,26 @@ export default function ProductGrid() {
           COLLECTION
         </h2>
         <p className="grid-copy">
-          헤어 · 두피 · 피부 케어를 큰 카드로 한눈에 살펴보세요
+          헤어 케어와 피부 케어를 나눠 살펴보세요
         </p>
 
-        <div className="grid-content">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {sections.map((section) => (
+          <div
+            key={section.id}
+            id={section.id}
+            className="grid-group"
+            aria-labelledby={`${section.id}-heading`}
+          >
+            <h3 id={`${section.id}-heading`} className="grid-group-heading">
+              {section.title}
+            </h3>
+            <div className="grid-content">
+              {section.products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

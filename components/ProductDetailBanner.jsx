@@ -39,7 +39,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
         <p className="banner-kicker">{banner.kicker}</p>
         <p className="banner-product-name">{product.name}</p>
         <h2 id="banner-hero-heading" className="banner-heading">
-          {splitLines(banner.heading)}
+          {flowText(banner.heading)}
         </h2>
         <p className="banner-copy">{banner.intro}</p>
 
@@ -85,7 +85,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             id="banner-symptoms-heading"
             className="banner-heading banner-heading--sm"
           >
-            {splitLines(banner.symptomsHeading)}
+            {flowText(banner.symptomsHeading)}
           </h3>
           {banner.symptomsLead ? (
             <p className="banner-copy">{banner.symptomsLead}</p>
@@ -107,7 +107,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             id="banner-free-heading"
             className="banner-heading banner-heading--sm"
           >
-            {splitLines(banner.freeHeading)}
+            {flowText(banner.freeHeading)}
           </h3>
           {banner.freeLead ? (
             <p className="banner-copy">{banner.freeLead}</p>
@@ -141,7 +141,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             id="banner-points-heading"
             className="banner-heading banner-heading--sm"
           >
-            {splitLines(banner.pointsHeading)}
+            {flowText(banner.pointsHeading)}
           </h3>
           {banner.pointsLead ? (
             <p className="banner-copy">{banner.pointsLead}</p>
@@ -176,7 +176,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             id="banner-science-heading"
             className="banner-heading banner-heading--on-ink"
           >
-            {banner.scienceHeading}
+            {flowText(banner.scienceHeading)}
           </h3>
           {banner.scienceLead ? (
             <p className="banner-lead banner-lead--on-ink">
@@ -205,7 +205,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             id="banner-stats-heading"
             className="banner-heading banner-heading--sm"
           >
-            {splitLines(banner.statsHeading)}
+            {flowText(banner.statsHeading)}
           </h3>
           {banner.statsLead ? (
             <p className="banner-copy">{banner.statsLead}</p>
@@ -312,13 +312,9 @@ function hasItems(items) {
   return Array.isArray(items) && items.length > 0;
 }
 
-// Headlines in the data file use \n so a designer can control line breaks
-// without putting JSX in the copy. We turn each line into a <span> that
-// CSS can stack with `display: block`.
-function splitLines(text) {
-  return text.split("\n").map((line) => (
-    <span key={line} className="banner-heading-line">
-      {line}
-    </span>
-  ));
+// Headings may still contain \n from older copy. Join them so the
+// browser wraps on width, instead of forcing a new line in the middle
+// of a phrase.
+function flowText(text) {
+  return text.replaceAll("\n", " ");
 }

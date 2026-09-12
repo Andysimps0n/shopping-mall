@@ -114,10 +114,10 @@ export default function Header() {
         <BrandLogo />
 
         <nav className="header-content">
-          <Link href="/#collection" className="header-link">
+          <Link href="/#hair-care" className="header-link">
             헤어 케어
           </Link>
-          <Link href="/#collection" className="header-link">
+          <Link href="/#skin-care" className="header-link">
             피부 케어
           </Link>
           <Link href="/brand" className="header-link">

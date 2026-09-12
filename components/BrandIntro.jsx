@@ -14,10 +14,9 @@ export default function BrandIntro() {
           </h2>
 
           <p className="intro-copy">
-            AnnChloe는 살롱의 손길에서 시작된 뷰티 브랜드입니다. 현장에서 쌓아 온
-            감각과 신뢰를 바탕으로, 헤어 · 두피 · 피부 케어를 위한 제품을
-            정성껏 선보입니다. 매일의 루틴이 더 섬세하고 아름다워지도록,
-            우리는 본질에 집중합니다.
+            AnnChloe는 살롱의 손길에서 시작된 퍼펙트 천연 브랜드입니다.
+            오일 · 방부제 · 합성 계면활성제를 빼는 6無 처방으로, 헤어 · 두피 ·
+            피부의 순환 리듬을 지키는 제품을 선보입니다.
           </p>
 
           <a href="/brand" className="button intro-button">

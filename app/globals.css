@@ -255,86 +255,129 @@ svg {
   min-height: 420px;
   margin-top: -4rem;
   overflow: hidden;
+  background-color: var(--color-well);
 }
 
-/* .hero-overlay {
+/* Keep every slide in the DOM so arrow clicks only toggle visibility.
+   Hidden slides stay opacity: 0 (not display: none) so the browser can
+   decode them ahead of time. No transition — the swap should be instant.
+
+   z-index: 0 here creates a stacking context. That traps .hero-slide's
+   z-index inside the photo layer, so it cannot cover the text / arrows. */
+.hero-slides {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hero-slide.is-active {
+  z-index: 1;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Studio carousel shots are bright white. A pale wash on the left (and
+   from the bottom on small screens) keeps dark type readable without
+   hiding the bottle in the middle of the frame. */
+.hero-overlay {
   pointer-events: none;
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     to top,
-    rgba(198, 198, 198, 0.3),
-    rgba(0, 0, 0, 0.2),
-    transparent
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(255, 255, 255, 0.72) 26%,
+    rgba(255, 255, 255, 0.18) 48%,
+    transparent 68%
   );
-} */
+}
 
 .hero-wrapper {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  padding-bottom: 5rem;
+  justify-content: flex-end;
+  padding-top: 5.5rem;
+  padding-bottom: 4.5rem;
 }
 
 .hero-content {
-  margin-top: 27%;
-  max-width: 36rem;
+  max-width: 22rem;
 }
 
 .hero-category {
-  font-size: 0.875rem;
-  letter-spacing: 0.2em;
-  color: var(--color-cream-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--color-brand);
 }
 
+/* Soft plum-charcoal instead of #1a1a1a. Near-black on these
+   bright studio shots feels like a stamp; this keeps the type
+   readable without the hard contrast. */
 .hero-title {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   white-space: pre-line;
-  font-size: 2.25rem;
+  font-family: var(--font-pretendard);
+  font-size: 2rem;
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.025em;
-  color: var(--color-cream);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  color: #603182;
 }
 
 .hero-name {
-  margin-top: 1.25rem;
-  font-size: 1.125rem;
-  color: var(--color-cream-soft);
+  margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #8d8493;
 }
 
 .hero-price {
-  margin-top: 0.5rem;
-  font-size: 1.25rem;
+  margin-top: 0.35rem;
+  font-size: 1.125rem;
   font-weight: 500;
-  color: var(--color-cream);
+  color: #6d6476;
 }
 
 .hero-button {
-  margin-top: 1.75rem;
+  margin-top: 1.5rem;
   padding: 0.875rem 2.25rem;
-  font-size: 1rem;
+  font-size: 0.9375rem;
+  box-shadow: 0 10px 24px rgba(99, 41, 140, 0.22);
 }
 
 .hero-arrow {
   position: absolute;
   top: 50%;
+  z-index: 2;
   display: flex;
   width: 2.75rem;
   height: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.15);
-  color: var(--color-white);
-  backdrop-filter: blur(4px);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  background-color: rgba(255, 255, 255, 0.82);
+  color: #6d6476;
+  backdrop-filter: blur(8px);
   transform: translateY(-50%);
-  transition: background-color 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 .hero-arrow:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--color-white);
+  color: var(--color-brand);
 }
 
 .hero-arrow--prev {
@@ -347,8 +390,9 @@ svg {
 
 .hero-dots {
   position: absolute;
-  bottom: 1.5rem;
+  bottom: 1.25rem;
   left: 50%;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -359,34 +403,50 @@ svg {
   height: 0.375rem;
   width: 0.375rem;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(26, 26, 26, 0.22);
   transition: width 150ms ease, background-color 150ms ease;
 }
 
 .hero-dot:hover {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(99, 41, 140, 0.55);
 }
 
 .hero-dot.is-active {
   width: 1.75rem;
-  background-color: var(--color-white);
+  background-color: var(--color-brand);
 }
 
 @media (min-width: 768px) {
+  .hero-overlay {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.58) 28%,
+      rgba(255, 255, 255, 0.12) 48%,
+      transparent 62%
+    );
+  }
+
   .hero-wrapper {
-    padding-bottom: 6rem;
+    justify-content: center;
+    padding-bottom: 5rem;
+  }
+
+  .hero-content {
+    max-width: 28rem;
   }
 
   .hero-title {
-    font-size: 3.75rem;
+    font-size: 3.15rem;
+    line-height: 1.16;
   }
 
   .hero-name {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
 
   .hero-price {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
   }
 
   .hero-arrow--prev {
@@ -433,15 +493,15 @@ svg {
   min-height: 22rem;
 }
 
-/* Real product photo: fill the parent box. Bottle shots are often
-   landscape with the product on the right, so pin focus to the right. */
+/* Real product photo: fill the parent box. Studio shots keep the bottle
+   in the middle, so crop evenly from both sides. */
 .product-image-photo {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: right center;
+  object-position: center center;
 }
 
 .product-image-monogram {
@@ -532,17 +592,17 @@ svg {
 }
 
 .product-card-action {
-  display: inline-block;
-  margin-top: 1rem;
+  margin-top: 1.15rem;
+  padding: 0.7rem 1.5rem;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-brand);
-  transition: color 150ms ease;
 }
 
-.ProductCard:hover .product-card-name,
-.ProductCard:hover .product-card-action {
+.ProductCard:hover .product-card-name {
   color: var(--color-brand);
+}
+
+.ProductCard:hover .product-card-action {
+  background-color: var(--color-brand-hover);
 }
 
 /* ---------- Product grid (2-column catalog under the hero) ---------- */
@@ -573,6 +633,23 @@ svg {
   margin-top: 2.5rem; 
 }
 
+.grid-group {
+  margin-top: 3.25rem;
+  /* Sticky header is 4rem. Extra room so the group title is not hidden. */
+  scroll-margin-top: 5.5rem;
+}
+
+.grid-group-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+
+.grid-group .grid-content {
+  margin-top: 1.5rem;
+}
+
 .ProductGrid .product-card-price {
   font-size: 1.25rem;
 }
@@ -601,6 +678,18 @@ svg {
   .grid-content {
     gap: 4rem 2rem;
     margin-top: 3.5rem;
+  }
+
+  .grid-group {
+    margin-top: 4.5rem;
+  }
+
+  .grid-group-heading {
+    font-size: 1.25rem;
+  }
+
+  .grid-group .grid-content {
+    margin-top: 2rem;
   }
 }
 
@@ -658,48 +747,466 @@ svg {
 /* ---------- Brand page ---------- */
 
 .BrandPage {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-.brand-page-wrapper {
-  max-width: 80%;
+.brand-hero,
+.brand-section {
+  padding-top: 4.5rem;
+  padding-bottom: 4.5rem;
 }
 
-.brand-page-eyebrow {
+.brand-hero-wrapper,
+.brand-mineral-wrapper,
+.brand-split-wrapper {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+}
+
+.brand-hero-content,
+.brand-mineral-content,
+.brand-split-copy {
+  max-width: 40rem;
+}
+
+.brand-section-wrapper > .brand-eyebrow,
+.brand-section-wrapper > .brand-section-heading,
+.brand-section-wrapper > .brand-lead,
+.brand-section-wrapper > .brand-copy {
+  max-width: 40rem;
+}
+
+.brand-eyebrow {
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.2em;
   color: var(--color-muted);
 }
 
-.brand-page-heading {
+.brand-kicker {
+  margin-top: 0.85rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-brand);
+}
+
+.brand-heading {
   margin-top: 0.75rem;
-  font-size: 1.875rem;
+  font-size: 1.85rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
   color: var(--color-ink);
 }
 
-.brand-page-copy {
-  margin-top: 1.5rem;
+.brand-section-heading {
+  margin-top: 0.75rem;
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+}
+
+.brand-lead {
+  margin-top: 1.25rem;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.brand-copy {
+  margin-top: 1rem;
   font-size: 1rem;
-  line-height: 1.625;
+  line-height: 1.7;
   color: var(--color-muted);
 }
 
+.brand-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.1rem;
+  margin: 1.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brand-highlights li {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-brand);
+}
+
+.brand-hero-media,
+.brand-mineral-media {
+  margin: 0;
+}
+
+.brand-hero-photo,
+.brand-mineral-photo {
+  display: block;
+  width: 100%;
+  background-color: var(--color-well);
+}
+
+.brand-hero-photo {
+  aspect-ratio: 5 / 4;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.brand-mineral-photo {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: center;
+}
+
+.brand-section--wash {
+  background-color: var(--color-wash);
+}
+
+.brand-pillars,
+.brand-approach-grid,
+.brand-free-grid,
+.brand-for-list,
+.brand-stats,
+.brand-compare {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brand-pillars {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 2.25rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.brand-pillar {
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.brand-pillar-index {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--color-brand);
+}
+
+.brand-pillar-title {
+  margin-top: 0.4rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.brand-pillar-copy {
+  margin-top: 0.45rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.brand-free-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 2.25rem;
+  max-width: none;
+}
+
+.brand-free-card {
+  padding: 1.4rem 1.2rem 1.5rem;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-hairline);
+}
+
+.brand-free-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-brand);
+}
+
+.brand-free-title {
+  margin-top: 0.85rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.brand-free-copy {
+  margin-top: 0.45rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.brand-compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1.8rem;
+}
+
+.brand-compare-row {
+  padding: 1.1rem 0 1.15rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.brand-compare-row dd {
+  margin: 0;
+}
+
+.brand-compare-label {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.brand-compare-value {
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-brand);
+}
+
+.brand-compare-note {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.brand-footnote {
+  margin-top: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: var(--color-muted);
+}
+
+.brand-approach-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 2.25rem;
+  max-width: none;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.brand-approach-card {
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.brand-for-list {
+  margin-top: 1.6rem;
+}
+
+.brand-for-list li {
+  padding: 0.75rem 0 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 0.975rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+  box-shadow: inset 2px 0 0 var(--color-brand);
+}
+
+.brand-for-list li:first-child {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.brand-stats-heading {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.brand-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.4rem 1rem;
+  margin-top: 1.5rem;
+}
+
+.brand-stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-brand);
+}
+
+.brand-stat-label {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.brand-company {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+  background-color: var(--color-brand);
+  color: var(--color-cream);
+  text-align: center;
+}
+
+.brand-company-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-company-wordmark {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.brand-company-subtitle {
+  margin-top: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: var(--color-cream-soft);
+}
+
+.brand-company-name {
+  margin-top: 1.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-cream);
+}
+
+.brand-company-address,
+.brand-company-tel {
+  margin-top: 0.55rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-cream-soft);
+}
+
+.brand-company-tel {
+  display: inline-block;
+}
+
+.brand-company-tel:hover {
+  color: var(--color-white);
+}
+
+.brand-company-button {
+  margin-top: 2.25rem;
+  padding: 0.875rem 2rem;
+  font-size: 0.875rem;
+  background-color: var(--color-white);
+  color: var(--color-brand);
+}
+
+.brand-company-button:hover {
+  background-color: var(--color-cream);
+  color: var(--color-brand-hover);
+}
+
+@media (min-width: 640px) {
+  .brand-free-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .brand-approach-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0 2rem;
+  }
+
+  .brand-approach-card:nth-child(odd) {
+    padding-right: 0.5rem;
+  }
+
+  .brand-compare {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 2rem;
+  }
+}
+
 @media (min-width: 768px) {
-  .BrandPage {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
+  .brand-hero,
+  .brand-section {
+    padding-top: 6.5rem;
+    padding-bottom: 6.5rem;
   }
 
-  .brand-page-heading {
-    font-size: 2.25rem;
+  .brand-hero-wrapper {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 3.5rem;
+    align-items: center;
   }
 
-  .brand-page-copy {
+  .brand-mineral-wrapper,
+  .brand-split-wrapper {
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: start;
+    max-width: none;
+  }
+
+  .brand-hero-content,
+  .brand-mineral-content,
+  .brand-split-copy {
+    max-width: none;
+  }
+
+  .brand-heading {
+    font-size: 2.35rem;
+  }
+
+  .brand-section-heading {
+    font-size: 2rem;
+  }
+
+  .brand-lead {
     font-size: 1.125rem;
+  }
+
+  .brand-hero-photo {
+    aspect-ratio: 5 / 4;
+  }
+
+  .brand-free-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .brand-pillars {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0 1.75rem;
+  }
+
+  .brand-pillar {
+    padding-top: 1.5rem;
+  }
+
+  .brand-company {
+    padding-top: 6.5rem;
+    padding-bottom: 6.5rem;
+  }
+
+  .brand-company-wordmark {
+    font-size: 2.4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .brand-hero-wrapper {
+    gap: 5rem;
   }
 }
 
@@ -1078,7 +1585,7 @@ svg {
 }
 
 .banner-block {
-  padding: 3rem 1.5rem;
+  padding: 2.4rem 1.2rem;
 }
 
 .banner-block + .banner-block {
@@ -1114,9 +1621,9 @@ svg {
 }
 
 .banner-heading {
-  margin-top: 0.85rem;
-  max-width: 22em;
-  font-size: 1.65rem;
+  margin-top: 0.7rem;
+  max-width: 36rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -0.03em;
@@ -1124,15 +1631,11 @@ svg {
 }
 
 .banner-heading--sm {
-  font-size: 1.45rem;
+  font-size: 1.3rem;
 }
 
 .banner-heading--on-ink {
   color: var(--color-cream);
-}
-
-.banner-heading-line {
-  display: block;
 }
 
 .banner-subheading {
@@ -1144,10 +1647,10 @@ svg {
 
 .banner-copy,
 .banner-lead {
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   max-width: 38rem;
   font-size: 0.9375rem;
-  line-height: 1.8;
+  line-height: 1.65;
   color: var(--color-muted);
 }
 
@@ -1166,7 +1669,7 @@ svg {
 }
 
 .banner-hero-media {
-  margin: 2.25rem 0 0;
+  margin: 1.8rem 0 0;
 }
 
 .banner-hero-photo {
@@ -1181,14 +1684,14 @@ svg {
 .banner-pillars {
   display: grid;
   grid-template-columns: 1fr;
-  margin-top: 1.75rem;
+  margin-top: 1.4rem;
   border-top: 1px solid var(--color-hairline);
 }
 
 .banner-pillar {
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 0;
+  padding: 1.2rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
 
@@ -1215,12 +1718,12 @@ svg {
 }
 
 .banner-symptoms {
-  margin-top: 1.75rem;
+  margin-top: 1.4rem;
   max-width: 38rem;
 }
 
 .banner-symptoms li {
-  padding: 0.9rem 0 0.9rem 1rem;
+  padding: 0.7rem 0 0.7rem 1rem;
   border-bottom: 1px solid var(--color-hairline);
   font-size: 0.9375rem;
   line-height: 1.6;
@@ -1235,8 +1738,8 @@ svg {
 .banner-highlights {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  margin-top: 1.5rem;
+  gap: 0.4rem 1rem;
+  margin-top: 1.2rem;
 }
 
 .banner-highlight {
@@ -1256,7 +1759,7 @@ svg {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
-  margin-top: 1.75rem;
+  margin-top: 1.4rem;
   max-width: 40rem;
   border-top: 1px solid var(--color-hairline);
 }
@@ -1264,7 +1767,7 @@ svg {
 .banner-free-item {
   display: flex;
   flex-direction: column;
-  padding: 1.35rem 0;
+  padding: 1.1rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
 
@@ -1283,15 +1786,15 @@ svg {
 }
 
 .banner-points {
-  margin-top: 2rem;
+  margin-top: 1.6rem;
   max-width: 40rem;
 }
 
 .banner-point {
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr);
-  gap: 0.75rem 1rem;
-  padding: 1.35rem 0;
+  gap: 0.6rem 1rem;
+  padding: 1.1rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
 
@@ -1322,7 +1825,7 @@ svg {
 }
 
 .banner-footnote {
-  margin-top: 1.5rem;
+  margin-top: 1.2rem;
   max-width: 38rem;
   font-size: 0.8125rem;
   line-height: 1.65;
@@ -1332,8 +1835,8 @@ svg {
 .banner-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.75rem 1rem;
-  margin-top: 2rem;
+  gap: 1.4rem 1rem;
+  margin-top: 1.6rem;
 }
 
 .banner-stat-value {
@@ -1352,7 +1855,7 @@ svg {
 }
 
 .banner-caption {
-  margin-top: 1.5rem;
+  margin-top: 1.2rem;
   max-width: 38rem;
   font-size: 0.8125rem;
   line-height: 1.6;
@@ -1360,9 +1863,9 @@ svg {
 }
 
 .banner-note {
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   max-width: 38rem;
-  padding: 1rem 1.1rem;
+  padding: 0.8rem 0.9rem;
   background-color: var(--color-white);
   border: 1px solid var(--color-hairline);
   font-size: 0.9375rem;
@@ -1371,7 +1874,7 @@ svg {
 }
 
 .banner-how-group {
-  margin-top: 1.85rem;
+  margin-top: 1.5rem;
   max-width: 40rem;
 }
 
@@ -1387,15 +1890,15 @@ svg {
 }
 
 .banner-steps {
-  margin-top: 1.5rem;
+  margin-top: 1.2rem;
   max-width: 40rem;
 }
 
 .banner-step {
   display: grid;
   grid-template-columns: 1.75rem minmax(0, 1fr);
-  gap: 0.75rem;
-  padding: 0.95rem 0;
+  gap: 0.6rem;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--color-hairline);
   font-size: 0.9375rem;
   line-height: 1.7;
@@ -1409,7 +1912,7 @@ svg {
 }
 
 .banner-guide-heading {
-  margin-top: 2.25rem;
+  margin-top: 1.8rem;
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.16em;
@@ -1422,7 +1925,7 @@ svg {
 }
 
 .banner-cautions li {
-  padding: 0.7rem 0;
+  padding: 0.55rem 0;
   border-bottom: 1px solid var(--color-hairline);
   font-size: 0.9375rem;
   line-height: 1.7;
@@ -1430,25 +1933,25 @@ svg {
 }
 
 .banner-ingredients {
-  margin-top: 0.85rem;
+  margin-top: 0.7rem;
   max-width: 40rem;
   font-size: 0.875rem;
-  line-height: 1.85;
+  line-height: 1.7;
   overflow-wrap: break-word;
   color: var(--color-muted);
 }
 
 @media (min-width: 640px) {
   .banner-block {
-    padding: 3.75rem 2rem;
+    padding: 3rem 1.6rem;
   }
 
   .banner-heading {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .banner-heading--sm {
-    font-size: 1.75rem;
+    font-size: 1.55rem;
   }
 
   .banner-hero-photo {
@@ -1460,43 +1963,43 @@ svg {
   }
 
   .banner-pillar {
-    padding: 1.5rem 1.25rem 1.5rem 0;
+    padding: 1.2rem 1rem 1.2rem 0;
   }
 
   .banner-pillar:nth-child(odd) {
-    padding-right: 1.5rem;
+    padding-right: 1.2rem;
     border-right: 1px solid var(--color-hairline);
   }
 
   .banner-pillar:nth-child(even) {
-    padding-left: 1.5rem;
+    padding-left: 1.2rem;
     padding-right: 0;
   }
 
   .banner-stats {
     grid-template-columns: repeat(3, 1fr);
-    gap: 2rem 1.5rem;
+    gap: 1.6rem 1.2rem;
   }
 
   .banner-stat-value {
-    font-size: 2.35rem;
+    font-size: 2.1rem;
   }
 }
 
 @media (min-width: 768px) {
   .banner-block {
-    padding: 4.5rem 2.5rem;
+    padding: 3.6rem 2rem;
   }
 
   .banner-copy,
   .banner-lead {
-    font-size: 1rem;
+    font-size: 0.9375rem;
   }
 }
 
 @media (min-width: 1024px) {
   .banner-block {
-    padding: 4.75rem 2.75rem;
+    padding: 3.8rem 2.2rem;
   }
 }
 

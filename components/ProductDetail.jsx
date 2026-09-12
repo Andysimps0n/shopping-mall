@@ -5,7 +5,7 @@ import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
 import ProductReviews from "./ProductReviews";
 import { getProductBanner } from "@/lib/productBanners";
-import { formatPrice, getProductPhotoSrc } from "@/lib/products";
+import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/products";
 
 /**
  * Product detail layout:
@@ -61,7 +61,9 @@ export default function ProductDetail({ product, recommended, reviews }) {
             <nav className="product-page-breadcrumb" aria-label="경로">
               <Link href="/">Home</Link>
               <span aria-hidden="true"> / </span>
-              <Link href="/#collection">{product.categoryLabel}</Link>
+              <Link href={`/#${getCollectionSectionId(product.category)}`}>
+                {product.categoryLabel}
+              </Link>
             </nav>
 
             <p className="product-page-category">{product.categoryLabel}</p>

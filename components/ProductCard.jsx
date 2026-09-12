@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getProductPhotoSrc } from "@/lib/products";
 
 // A thin-line heart used for the wishlist toggle. Fills with the brand color
 // when active. This is UI only — nothing is persisted.
@@ -44,6 +44,9 @@ export default function ProductCard({ product, compact = false }) {
           <ProductImage
             name={product.name}
             categoryLabel={product.categoryLabel}
+            // Only pass a photo when the file exists. Other products
+            // still fall back to the gray "AC" placeholder.
+            src={getProductPhotoSrc(product)}
           />
         </div>
 
@@ -55,7 +58,7 @@ export default function ProductCard({ product, compact = false }) {
           ) : null}
           <p className="product-card-category">{product.categoryLabel}</p>
           {!compact ? (
-            <span className="product-card-action">자세히 보기 →</span>
+            <span className="button product-card-action">구매하기</span>
           ) : null}
         </div>
       </Link>
