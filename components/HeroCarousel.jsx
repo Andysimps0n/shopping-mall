@@ -5,10 +5,22 @@ import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { formatPrice, getHeroPhotoSrc, products } from "@/lib/products";
 
+// The slide the shopper is looking at, plus the one on each side.
+// Those three start downloading immediately so Next / Prev feels instant.
+// The other slides wait (loading="lazy") and do not decode 7 photos at once.
+function getHotIndexes(activeIndex, total) {
+  return new Set([
+    (activeIndex - 1 + total) % total,
+    activeIndex,
+    (activeIndex + 1) % total,
+  ]);
+}
+
 export default function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const total = products.length;
+  const hotIndexes = getHotIndexes(activeIndex, total);
 
   const goTo = useCallback(
     (index) => {
@@ -22,10 +34,6 @@ export default function HeroCarousel() {
   const goPrev = useCallback(() => goTo(activeIndex - 1), [activeIndex, goTo]);
 
   const activeProduct = products[activeIndex];
-
-  // Every hero photo is mounted up front. Clicking an arrow then only
-  // flips which slide is visible, instead of swapping one <img src> and
-  // waiting for a new 10MB+ file to download.
 
   return (
     <section
@@ -47,7 +55,8 @@ export default function HeroCarousel() {
               categoryLabel={product.categoryLabel}
               src={getHeroPhotoSrc(product)}
               cover
-              loading="eager"
+              loading={hotIndexes.has(index) ? "eager" : "lazy"}
+              fetchPriority={index === activeIndex ? "high" : "low"}
             />
           </div>
         ))}
