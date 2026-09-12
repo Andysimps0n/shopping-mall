@@ -3,6 +3,7 @@ import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
 import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
+import ProductPlaceholderBanner from "./ProductPlaceholderBanner";
 import ProductReviews from "./ProductReviews";
 import { getProductBanner } from "@/lib/productBanners";
 import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/products";
@@ -15,7 +16,8 @@ import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/p
  *
  * The long banner is opt-in per product. If `getProductBanner(id)` returns
  * content, we render the editorial story. Products without an entry keep
- * the short placeholder. Each banner can skip sections it has no copy for.
+ * the short placeholder. Both banners start collapsed so reviews are nearer
+ * the top of the page. Each banner can skip sections it has no copy for.
  */
 export default function ProductDetail({ product, recommended, reviews }) {
   const banner = getProductBanner(product.id);
@@ -42,17 +44,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
               imageSrc={imageSrc}
             />
           ) : (
-            <div className="product-page-banner">
-              <ProductImage
-                name={product.name}
-                categoryLabel={product.categoryLabel}
-                size="banner"
-              />
-              <div className="product-page-banner-content">
-                <p className="product-page-banner-eyebrow">AnnChloe</p>
-                <p className="product-page-banner-copy">{product.tagline}</p>
-              </div>
-            </div>
+            <ProductPlaceholderBanner product={product} />
           )}
         </div>
 

@@ -74,8 +74,21 @@ h1,
 h2,
 h3,
 h4,
-p {
+p,
+blockquote {
   margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 a {
@@ -258,10 +271,10 @@ svg {
   background-color: var(--color-well);
 }
 
-/* Keep every slide in the DOM so arrow clicks only toggle visibility.
-   Hidden slides use visibility: hidden (not display: none) so a decoded
-   neighbor can appear immediately. No opacity fade — a long fade would
-   hide an unfinished decode and make the swap feel even slower.
+/* Keep every slide in the DOM so the next JPEG is already decoded.
+   Hidden slides use visibility: hidden (not display: none). During a
+   move, the outgoing and incoming slides are both visible and we
+   translate them left or right.
 
    z-index: 0 here creates a stacking context. That traps .hero-slide's
    z-index inside the photo layer, so it cannot cover the text / arrows. */
@@ -269,21 +282,80 @@ svg {
   position: absolute;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
 }
 
 .hero-slide {
   position: absolute;
   inset: 0;
-  opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }
 
+.hero-slide.is-active,
+.hero-slide.is-exit {
+  visibility: visible;
+}
+
 .hero-slide.is-active {
   z-index: 1;
-  opacity: 1;
-  visibility: visible;
   pointer-events: auto;
+}
+
+.hero-slide.is-exit {
+  z-index: 0;
+}
+
+.hero-slide.is-enter-next {
+  animation: hero-slide-in-next 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-slide.is-exit-next {
+  animation: hero-slide-out-next 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-slide.is-enter-prev {
+  animation: hero-slide-in-prev 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-slide.is-exit-prev {
+  animation: hero-slide-out-prev 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes hero-slide-in-next {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes hero-slide-out-next {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes hero-slide-in-prev {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes hero-slide-out-prev {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 /* Studio carousel shots are bright white. A pale wash on the left (and
@@ -316,6 +388,36 @@ svg {
 
 .hero-content {
   max-width: 22rem;
+}
+
+.hero-content.is-enter-next {
+  animation: hero-copy-in-next 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-content.is-enter-prev {
+  animation: hero-copy-in-prev 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes hero-copy-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes hero-copy-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .hero-category {
@@ -461,6 +563,17 @@ svg {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide.is-enter-next,
+  .hero-slide.is-exit-next,
+  .hero-slide.is-enter-prev,
+  .hero-slide.is-exit-prev,
+  .hero-content.is-enter-next,
+  .hero-content.is-enter-prev {
+    animation: none;
+  }
+}
+
 /* ---------- Product image placeholder ---------- */
 
 .ProductImage {
@@ -547,6 +660,20 @@ svg {
 
 .product-card-media {
   position: relative;
+  /* Soft, thin wash mat — less frame-like than a thick well. */
+  padding: 0.5rem;
+  background-color: var(--color-wash);
+  transition: background-color 150ms ease;
+}
+
+.ProductCard:hover .product-card-media {
+  background-color: var(--color-well);
+}
+
+@media (min-width: 768px) {
+  .product-card-media {
+    padding: 0.625rem;
+  }
 }
 
 .product-card-wishlist {
@@ -620,19 +747,22 @@ svg {
 .ProductGrid {
   padding-top: 5rem;
   padding-bottom: 5rem;
-  border-top: 1px solid var(--color-hairline);
+  /* Sticky header is 4rem. Extra room so the section title is not hidden. */
+  scroll-margin-top: 5.5rem;
 }
 
 .grid-heading {
   font-size: 1.875rem;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: var(--color-ink);
+  color: #391850;
 }
 
 .grid-copy {
   margin-top: 0.75rem;
+  max-width: 32rem;
   font-size: 1rem;
+  line-height: 1.55;
   color: var(--color-muted);
 }
 
@@ -641,23 +771,6 @@ svg {
   grid-template-columns: 1fr;
   gap: 2.5rem;
   margin-top: 2.5rem; 
-}
-
-.grid-group {
-  margin-top: 3.25rem;
-  /* Sticky header is 4rem. Extra room so the group title is not hidden. */
-  scroll-margin-top: 5.5rem;
-}
-
-.grid-group-heading {
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--color-ink);
-}
-
-.grid-group .grid-content {
-  margin-top: 1.5rem;
 }
 
 .ProductGrid .product-card-price {
@@ -677,8 +790,8 @@ svg {
 
 @media (min-width: 768px) {
   .ProductGrid {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
+    padding-top: 5rem;
+    padding-bottom:5rem;
   }
 
   .grid-heading {
@@ -688,18 +801,6 @@ svg {
   .grid-content {
     gap: 4rem 2rem;
     margin-top: 3.5rem;
-  }
-
-  .grid-group {
-    margin-top: 4.5rem;
-  }
-
-  .grid-group-heading {
-    font-size: 1.25rem;
-  }
-
-  .grid-group .grid-content {
-    margin-top: 2rem;
   }
 }
 
@@ -720,23 +821,28 @@ svg {
 }
 
 .intro-heading {
+  font-family: var(--font-display);
   font-size: 1.875rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   color: var(--color-ink);
 }
 
 .intro-copy {
   margin-top: 1.5rem;
   font-size: 1rem;
-  line-height: 1.625;
+  font-weight: 400;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
   color: var(--color-muted);
 }
 
 .intro-button {
   margin-top: 2.5rem;
   padding: 0.875rem 2rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
 }
 
 @media (min-width: 768px) {
@@ -746,11 +852,12 @@ svg {
   }
 
   .intro-heading {
-    font-size: 2.25rem;
+    font-size: 2.75rem;
   }
 
   .intro-copy {
     font-size: 1.125rem;
+    line-height: 1.9;
   }
 }
 
@@ -759,15 +866,27 @@ svg {
 .BrandPage {
   padding-top: 0;
   padding-bottom: 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-.brand-hero,
+.brand-hero {
+  padding-top: 3.5rem;
+  padding-bottom: 0;
+}
+
 .brand-section {
   padding-top: 4.5rem;
   padding-bottom: 4.5rem;
 }
 
-.brand-hero-wrapper,
+.brand-hero-copy {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
 .brand-mineral-wrapper,
 .brand-split-wrapper {
   display: grid;
@@ -775,7 +894,6 @@ svg {
   gap: 2.5rem;
 }
 
-.brand-hero-content,
 .brand-mineral-content,
 .brand-split-copy {
   max-width: 40rem;
@@ -804,8 +922,17 @@ svg {
   color: var(--color-brand);
 }
 
+.brand-heading-line {
+  margin-top: 1.1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  color: var(--color-brand);
+}
+
 .brand-heading {
-  margin-top: 0.75rem;
+  margin-top: 0.35rem;
   font-size: 1.85rem;
   font-weight: 700;
   line-height: 1.35;
@@ -837,43 +964,59 @@ svg {
 }
 
 .brand-highlights {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 1.1rem;
-  margin: 1.6rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 2rem 0 0;
   padding: 0;
   list-style: none;
 }
 
-.brand-highlights li {
-  font-size: 0.8125rem;
+.brand-highlight {
+  min-width: 0;
+  padding: 0.85rem 0.4rem 0.95rem;
+  border: 1px solid var(--color-hairline);
+}
+
+.brand-highlight-value {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.02em;
   color: var(--color-brand);
 }
 
-.brand-hero-media,
-.brand-mineral-media {
-  margin: 0;
+.brand-highlight-label {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--color-muted);
 }
 
-.brand-hero-photo,
-.brand-mineral-photo {
-  display: block;
-  width: 100%;
-  background-color: var(--color-well);
+.brand-hero-media {
+  margin: 1.75rem 0 0;
 }
 
 .brand-hero-photo {
-  aspect-ratio: 5 / 4;
-  object-fit: contain;
-  object-position: center bottom;
+  display: block;
+  width: 100%;
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.brand-mineral-photo {
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
+.brand-photo-frame {
+  margin: 0;
+  background-color: var(--color-well);
+}
+
+.brand-pack-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
   object-position: center;
+  padding: 1.25rem;
 }
 
 .brand-section--wash {
@@ -891,14 +1034,15 @@ svg {
   list-style: none;
 }
 
-.brand-pillars {
+.brand-pillars,
+.brand-approach-grid {
   display: grid;
   grid-template-columns: 1fr;
   margin-top: 2.25rem;
   border-top: 1px solid var(--color-hairline);
 }
 
-.brand-pillar {
+.brand-index-card {
   padding: 1.35rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
@@ -1004,17 +1148,36 @@ svg {
 }
 
 .brand-approach-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  margin-top: 2.25rem;
   max-width: none;
-  border-top: 1px solid var(--color-hairline);
 }
 
-.brand-approach-card {
-  padding: 1.35rem 0;
-  border-bottom: 1px solid var(--color-hairline);
+.brand-quote {
+  padding-top: 4.5rem;
+  padding-bottom: 4.5rem;
+  background-color: var(--color-wash);
+  text-align: center;
+}
+
+.brand-quote-wrapper {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.brand-quote-text {
+  margin-top: 1.25rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.7;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.brand-quote-credit {
+  margin-top: 1.25rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
 }
 
 .brand-for-list {
@@ -1129,6 +1292,14 @@ svg {
 }
 
 @media (min-width: 640px) {
+  .brand-highlight-value {
+    font-size: 1.35rem;
+  }
+
+  .brand-highlight-label {
+    font-size: 0.75rem;
+  }
+
   .brand-free-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1138,7 +1309,7 @@ svg {
     gap: 0 2rem;
   }
 
-  .brand-approach-card:nth-child(odd) {
+  .brand-approach-grid .brand-index-card:nth-child(odd) {
     padding-right: 0.5rem;
   }
 
@@ -1149,34 +1320,26 @@ svg {
 }
 
 @media (min-width: 768px) {
-  .brand-hero,
-  .brand-section {
+  .brand-hero {
+    padding-top: 5.5rem;
+  }
+
+  .brand-section,
+  .brand-quote {
     padding-top: 6.5rem;
     padding-bottom: 6.5rem;
   }
 
-  .brand-hero-wrapper {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-    gap: 3.5rem;
-    align-items: center;
+  .brand-hero-media {
+    margin-top: 3rem;
   }
 
-  .brand-mineral-wrapper,
-  .brand-split-wrapper {
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    align-items: start;
-    max-width: none;
-  }
-
-  .brand-hero-content,
-  .brand-mineral-content,
-  .brand-split-copy {
-    max-width: none;
+  .brand-heading-line {
+    font-size: 1.45rem;
   }
 
   .brand-heading {
-    font-size: 2.35rem;
+    font-size: 2.6rem;
   }
 
   .brand-section-heading {
@@ -1187,8 +1350,25 @@ svg {
     font-size: 1.125rem;
   }
 
-  .brand-hero-photo {
-    aspect-ratio: 5 / 4;
+  .brand-quote-text {
+    font-size: 1.45rem;
+  }
+
+  .brand-mineral-wrapper,
+  .brand-split-wrapper {
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: start;
+    max-width: none;
+  }
+
+  .brand-mineral-content,
+  .brand-split-copy {
+    max-width: none;
+  }
+
+  .brand-pack-photo {
+    padding: 1.5rem;
   }
 
   .brand-free-grid {
@@ -1200,7 +1380,7 @@ svg {
     gap: 0 1.75rem;
   }
 
-  .brand-pillar {
+  .brand-index-card {
     padding-top: 1.5rem;
   }
 
@@ -1211,12 +1391,6 @@ svg {
 
   .brand-company-wordmark {
     font-size: 2.4rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .brand-hero-wrapper {
-    gap: 5rem;
   }
 }
 
@@ -1251,7 +1425,8 @@ svg {
   }
 
   .ProductDetailBanner,
-  .product-page-banner {
+  .product-page-banner,
+  .product-page-banner-fold {
     order: 3;
   }
 }
@@ -1582,7 +1757,8 @@ svg {
 
 /* ---------- Product detail banner (long-form story under the gallery) ---------- */
 
-.ProductDetailBanner {
+.ProductDetailBanner,
+.product-page-banner-fold {
   background-color: var(--color-white);
   border-top: 1px solid var(--color-hairline);
 }
@@ -1592,6 +1768,70 @@ svg {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Collapsed preview: keep intro short so reviews stay near the first viewport. */
+.ProductDetailBanner.is-collapsed .banner-copy--preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.banner-fold-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 9999px;
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.banner-fold-toggle:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background-color: var(--color-wash);
+}
+
+.banner-fold-chevron {
+  transition: transform 150ms ease;
+}
+
+.banner-fold-chevron.is-expanded {
+  transform: rotate(180deg);
+}
+
+.banner-fold-body[hidden] {
+  display: none;
+}
+
+.banner-hero-media-block {
+  padding-top: 0;
+}
+
+.banner-hero-media-block .banner-hero-media {
+  margin-top: 0;
+}
+
+.banner-fold-footer {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 1.2rem 2rem;
+  border-top: 1px solid var(--color-hairline);
+  background-color: var(--color-wash);
+}
+
+.product-page-banner-summary {
+  padding: 2.4rem 1.2rem;
 }
 
 .banner-block {
@@ -1952,7 +2192,8 @@ svg {
 }
 
 @media (min-width: 640px) {
-  .banner-block {
+  .banner-block,
+  .product-page-banner-summary {
     padding: 3rem 1.6rem;
   }
 
@@ -1997,7 +2238,8 @@ svg {
 }
 
 @media (min-width: 768px) {
-  .banner-block {
+  .banner-block,
+  .product-page-banner-summary {
     padding: 3.6rem 2rem;
   }
 
@@ -2008,7 +2250,8 @@ svg {
 }
 
 @media (min-width: 1024px) {
-  .banner-block {
+  .banner-block,
+  .product-page-banner-summary {
     padding: 3.8rem 2.2rem;
   }
 }

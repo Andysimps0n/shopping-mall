@@ -1,39 +1,34 @@
 import ProductCard from "./ProductCard";
 import { getCollectionSections } from "@/lib/products";
 
-// Home catalog under the hero. Products are split into the same two
-// groups as the header: 헤어 케어 and 피부 케어.
+// Home catalog under the hero. Each category is its own grid so
+// 헤어 케어 and 피부 케어 read as equal, top-level titles — matching
+// the header links, not as children under a "Collection" label.
 export default function ProductGrid() {
   const sections = getCollectionSections();
 
   return (
-    <section id="collection" className="ProductGrid" aria-labelledby="grid-heading">
-      <div className="grid-wrapper container">
-        <h2 id="grid-heading" className="grid-heading">
-          COLLECTION
-        </h2>
-        <p className="grid-copy">
-          헤어 케어와 피부 케어를 나눠 살펴보세요
-        </p>
-
-        {sections.map((section) => (
-          <div
-            key={section.id}
-            id={section.id}
-            className="grid-group"
-            aria-labelledby={`${section.id}-heading`}
-          >
-            <h3 id={`${section.id}-heading`} className="grid-group-heading">
+    <div id="collection">
+      {sections.map((section) => (
+        <section
+          key={section.id}
+          id={section.id}
+          className="ProductGrid"
+          aria-labelledby={`${section.id}-heading`}
+        >
+          <div className="grid-wrapper container">
+            <h2 id={`${section.id}-heading`} className="grid-heading">
               {section.title}
-            </h3>
+            </h2>
+            <p className="grid-copy">{section.copy}</p>
             <div className="grid-content">
               {section.products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </div>
-        ))}
-      </div>
-    </section>
+        </section>
+      ))}
+    </div>
   );
 }

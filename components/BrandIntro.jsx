@@ -1,12 +1,11 @@
-// Company description interstitial — text pause after the product grid.
-// Neutral gray band keeps it distinct from the white sections around it.
+import Link from "next/link";
+
+// Same copy and layout as before. Only the typeface changes:
+// Playfair for the Latin heading, Pretendard with looser tracking for body.
 
 export default function BrandIntro() {
   return (
-    <section
-      className="BrandIntro"
-      aria-labelledby="brand-intro-heading"
-    >
+    <section className="BrandIntro" aria-labelledby="brand-intro-heading">
       <div className="intro-wrapper container">
         <div className="intro-content">
           <h2 id="brand-intro-heading" className="intro-heading">
@@ -19,9 +18,9 @@ export default function BrandIntro() {
             피부의 순환 리듬을 지키는 제품을 선보입니다.
           </p>
 
-          <a href="/brand" className="button intro-button">
+          <Link href="/brand" className="button intro-button">
             브랜드 이야기
-          </a>
+          </Link>
         </div>
       </div>
     </section>

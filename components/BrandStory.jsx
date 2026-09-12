@@ -72,36 +72,54 @@ function FreeIcon({ name }) {
   );
 }
 
+function BrandIndexList({ items, className }) {
+  return (
+    <ol className={className}>
+      {items.map((item) => (
+        <li key={item.index} className="brand-index-card">
+          <p className="brand-pillar-index">{item.index}</p>
+          <h3 className="brand-pillar-title">{item.title}</h3>
+          <p className="brand-pillar-copy">{item.copy}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 // Full brand story for /brand. Copy lives in lib/brand.js so this file
-// stays about layout: hero, philosophy, 6無, plant mineral, approach,
-// who-it's-for, survey stats, then company close.
+// stays about layout. The order follows the catalog PDF: cover →
+// philosophy → 6無 → challenge → turnover → mineral → approach →
+// vial → word of mouth → who-it's-for / stats → company close.
 export default function BrandStory() {
   return (
     <main className="BrandPage">
       <section className="brand-hero" aria-labelledby="brand-page-heading">
-        <div className="brand-hero-wrapper container">
-          <div className="brand-hero-content">
-            <p className="brand-eyebrow">{brand.eyebrow}</p>
-            <p className="brand-kicker">{brand.kicker}</p>
-            <h1 id="brand-page-heading" className="brand-heading">
-              {brand.heading}
-            </h1>
-            <p className="brand-lead">{brand.lead}</p>
-            <ul className="brand-highlights">
-              {brand.highlights.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
+        <div className="brand-hero-copy container">
+          <p className="brand-eyebrow">{brand.eyebrow}</p>
+          <p className="brand-kicker">{brand.kicker}</p>
+          <p className="brand-heading-line">{brand.headingLine}</p>
+          <h1 id="brand-page-heading" className="brand-heading">
+            {brand.heading}
+          </h1>
+          <p className="brand-lead">{brand.lead}</p>
 
-          <figure className="brand-hero-media">
-            <img
-              src={brand.lineupImage}
-              alt={brand.lineupAlt}
-              className="brand-hero-photo"
-            />
-          </figure>
+          <ul className="brand-highlights">
+            {brand.highlights.map((item) => (
+              <li key={item.value} className="brand-highlight">
+                <p className="brand-highlight-value">{item.value}</p>
+                <p className="brand-highlight-label">{item.label}</p>
+              </li>
+            ))}
+          </ul>
         </div>
+
+        <figure className="brand-hero-media">
+          <img
+            src={brand.lineupImage}
+            alt={brand.lineupAlt}
+            className="brand-hero-photo"
+          />
+        </figure>
       </section>
 
       <section
@@ -109,22 +127,14 @@ export default function BrandStory() {
         aria-labelledby="brand-story-heading"
       >
         <div className="brand-section-wrapper container">
-          <p className="brand-eyebrow">PHILOSOPHY</p>
+          <p className="brand-eyebrow">{brand.storyKicker}</p>
           <h2 id="brand-story-heading" className="brand-section-heading">
             {brand.storyHeading}
           </h2>
           <p className="brand-lead">{brand.storyLead}</p>
           <p className="brand-copy">{brand.storyCopy}</p>
 
-          <ol className="brand-pillars">
-            {brand.pillars.map((pillar) => (
-              <li key={pillar.index} className="brand-pillar">
-                <p className="brand-pillar-index">{pillar.index}</p>
-                <h3 className="brand-pillar-title">{pillar.title}</h3>
-                <p className="brand-pillar-copy">{pillar.copy}</p>
-              </li>
-            ))}
-          </ol>
+          <BrandIndexList items={brand.pillars} className="brand-pillars" />
         </div>
       </section>
 
@@ -153,14 +163,51 @@ export default function BrandStory() {
 
       <section
         className="brand-section"
+        aria-labelledby="brand-challenge-heading"
+      >
+        <div className="brand-section-wrapper container">
+          <p className="brand-eyebrow">{brand.challengeKicker}</p>
+          <h2 id="brand-challenge-heading" className="brand-section-heading">
+            {brand.challengeHeading}
+          </h2>
+          <p className="brand-lead">{brand.challengeLead}</p>
+          <p className="brand-copy">{brand.challengeCopy}</p>
+
+          <BrandIndexList
+            items={brand.challengeItems}
+            className="brand-pillars"
+          />
+        </div>
+      </section>
+
+      <section
+        className="brand-section brand-section--wash"
+        aria-labelledby="brand-turnover-heading"
+      >
+        <div className="brand-section-wrapper container">
+          <p className="brand-eyebrow">{brand.turnoverKicker}</p>
+          <h2 id="brand-turnover-heading" className="brand-section-heading">
+            {brand.turnoverHeading}
+          </h2>
+          <p className="brand-lead">{brand.turnoverLead}</p>
+
+          <BrandIndexList
+            items={brand.turnoverItems}
+            className="brand-pillars"
+          />
+        </div>
+      </section>
+
+      <section
+        className="brand-section"
         aria-labelledby="brand-mineral-heading"
       >
         <div className="brand-mineral-wrapper container">
-          <figure className="brand-mineral-media">
+          <figure className="brand-photo-frame">
             <img
               src={brand.mineralPhoto}
               alt={brand.mineralPhotoAlt}
-              className="brand-mineral-photo"
+              className="brand-pack-photo"
             />
           </figure>
 
@@ -197,15 +244,50 @@ export default function BrandStory() {
           </h2>
           <p className="brand-lead">{brand.approachLead}</p>
 
-          <ol className="brand-approach-grid">
-            {brand.approachItems.map((item) => (
-              <li key={item.index} className="brand-approach-card">
-                <p className="brand-pillar-index">{item.index}</p>
-                <h3 className="brand-pillar-title">{item.title}</h3>
-                <p className="brand-pillar-copy">{item.copy}</p>
-              </li>
-            ))}
-          </ol>
+          <BrandIndexList
+            items={brand.approachItems}
+            className="brand-approach-grid"
+          />
+        </div>
+      </section>
+
+      <section
+        className="brand-section"
+        aria-labelledby="brand-vial-heading"
+      >
+        <div className="brand-mineral-wrapper container">
+          <figure className="brand-photo-frame">
+            <img
+              src={brand.vialPhoto}
+              alt={brand.vialPhotoAlt}
+              className="brand-pack-photo"
+            />
+          </figure>
+
+          <div className="brand-mineral-content">
+            <p className="brand-eyebrow">{brand.vialKicker}</p>
+            <h2 id="brand-vial-heading" className="brand-section-heading">
+              {brand.vialHeading}
+            </h2>
+            <p className="brand-lead">{brand.vialLead}</p>
+            <p className="brand-copy">{brand.vialCopy}</p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="brand-quote"
+        aria-labelledby="brand-quote-heading"
+      >
+        <div className="brand-quote-wrapper container">
+          <p className="brand-eyebrow">{brand.quoteKicker}</p>
+          <h2 id="brand-quote-heading" className="visually-hidden">
+            {brand.quoteCredit}
+          </h2>
+          <blockquote className="brand-quote-text">
+            {brand.quote}
+          </blockquote>
+          <p className="brand-quote-credit">{brand.quoteCredit}</p>
         </div>
       </section>
 
