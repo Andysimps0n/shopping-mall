@@ -5,22 +5,10 @@ import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { formatPrice, getHeroPhotoSrc, products } from "@/lib/products";
 
-// The slide the shopper is looking at, plus the one on each side.
-// Those three start downloading immediately so Next / Prev feels instant.
-// The other slides wait (loading="lazy") and do not decode 7 photos at once.
-function getHotIndexes(activeIndex, total) {
-  return new Set([
-    (activeIndex - 1 + total) % total,
-    activeIndex,
-    (activeIndex + 1) % total,
-  ]);
-}
-
 export default function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const total = products.length;
-  const hotIndexes = getHotIndexes(activeIndex, total);
 
   const goTo = useCallback(
     (index) => {
@@ -34,6 +22,11 @@ export default function HeroCarousel() {
   const goPrev = useCallback(() => goTo(activeIndex - 1), [activeIndex, goTo]);
 
   const activeProduct = products[activeIndex];
+
+  // Every slide stays mounted and starts loading on first paint. The hero
+  // files are now ~40–100KB, so downloading all seven is cheap. If we
+  // lazy-load the farther slides, a fast Next click can flash a blank
+  // frame while that JPEG/WebP is still arriving.
 
   return (
     <section
@@ -55,7 +48,7 @@ export default function HeroCarousel() {
               categoryLabel={product.categoryLabel}
               src={getHeroPhotoSrc(product)}
               cover
-              loading={hotIndexes.has(index) ? "eager" : "lazy"}
+              loading="eager"
               fetchPriority={index === activeIndex ? "high" : "low"}
             />
           </div>
