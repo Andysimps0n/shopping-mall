@@ -23,9 +23,10 @@ export default function HeroCarousel() {
 
   const activeProduct = products[activeIndex];
 
-  // Every hero photo is mounted up front. Clicking an arrow then only
-  // flips which slide is visible, instead of swapping one <img src> and
-  // waiting for a new 10MB+ file to download.
+  // Every slide stays mounted and starts loading on first paint. The hero
+  // files are now ~40–100KB, so downloading all seven is cheap. If we
+  // lazy-load the farther slides, a fast Next click can flash a blank
+  // frame while that JPEG/WebP is still arriving.
 
   return (
     <section
@@ -48,6 +49,7 @@ export default function HeroCarousel() {
               src={getHeroPhotoSrc(product)}
               cover
               loading="eager"
+              fetchPriority={index === activeIndex ? "high" : "low"}
             />
           </div>
         ))}

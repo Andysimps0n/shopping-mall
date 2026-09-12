@@ -259,8 +259,9 @@ svg {
 }
 
 /* Keep every slide in the DOM so arrow clicks only toggle visibility.
-   Hidden slides stay opacity: 0 (not display: none) so the browser can
-   decode them ahead of time. No transition — the swap should be instant.
+   Hidden slides use visibility: hidden (not display: none) so a decoded
+   neighbor can appear immediately. No opacity fade — a long fade would
+   hide an unfinished decode and make the swap feel even slower.
 
    z-index: 0 here creates a stacking context. That traps .hero-slide's
    z-index inside the photo layer, so it cannot cover the text / arrows. */
@@ -275,12 +276,14 @@ svg {
   inset: 0;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
 }
 
 .hero-slide.is-active {
   z-index: 1;
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 /* Studio carousel shots are bright white. A pale wash on the left (and
@@ -494,7 +497,14 @@ svg {
 }
 
 /* Real product photo: fill the parent box. Studio shots keep the bottle
-   in the middle, so crop evenly from both sides. */
+   in the middle, so crop evenly from both sides.
+
+   <picture> is display: contents so it does not become a new box — the
+   <img> still positions against .ProductImage the same way as before. */
+.ProductImage picture {
+  display: contents;
+}
+
 .product-image-photo {
   position: absolute;
   inset: 0;
