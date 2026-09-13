@@ -1,0 +1,35 @@
+// Classic Prisma 7 schema: Product table + category enum.
+// The database URL lives in backend/.env as DATABASE_URL
+// and is wired in backend/prisma.config.ts.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductCategory {
+  hair
+  scalp
+  skin
+}
+
+model Product {
+  id          String          @id
+  name        String
+  tagline     String
+  description String
+  price       Int
+  category    ProductCategory
+  image       String?
+  heroImage   String?
+  imageZoom   Float?
+  story       String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("products")
+}
