@@ -1,23 +1,28 @@
 {
-  "name": "ann-chloe-storefront",
-  "version": "0.1.0",
+  "name": "mall",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "npm run dev --workspace=frontend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run studio --workspace=backend",
+    "build": "npm run build --workspace=frontend",
+    "studio": "npm run studio --workspace=backend"
   },
   "dependencies": {
-    "next": "^15.1.9",
-    "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.43",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49"
+    "prisma": "^7.10.0"
+  },
+  "overrides": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
   }
 }

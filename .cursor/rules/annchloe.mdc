@@ -1,0 +1,12 @@
+---
+description: AnnChloe mall — read brand and agent docs before editing
+globs:
+  - frontend/**
+  - backend/**
+  - design/**
+alwaysApply: true
+---
+
+작업을 시작하기 전에 루트 `AGENTS.md`와 `design/BRAND.md`를 읽으세요.
+비주얼 토큰은 `design/DESIGN-apple.md`, 실제 카피는 `frontend/lib/brand.js`와 `frontend/lib/products.js`가 단일 출처입니다.
+UI는 `frontend/`만, DB는 `backend/`만 수정하세요. PDF에 없는 효능·수치를 창작하지 마세요. 브랜드 한글 표기는 **앤클로이**로 통일합니다.

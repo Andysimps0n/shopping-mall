@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 범주형 데이터에 값 제약 넣는 코드 패턴
+enum ProductCategory {
+  hair
+  scalp
+  skin
+}
+
+
+
+model Product {
+  id          String           @id
+  name        String
+  tagline     String
+  description String
+  price       Int
+  category    ProductCategory
+  image       String?
+  heroImage   String?
+  imageZoom   Float?
+  story       String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  @@map("products")
+}
+
+
+// Run this to make table in DB, let the client use it
+// npx prisma migrate dev --name init_shop
+
+
+// Write Prisma Client code for JS (?)
+// npx prisma generate

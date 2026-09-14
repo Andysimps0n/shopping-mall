@@ -1,14 +1,12 @@
 # dependencies
-/node_modules
-/.pnp
-.pnp.js
+node_modules/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -19,5 +17,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# env (never commit secrets)
+.env
 .env*.local
+
+# prisma generated client
+backend/generated/
