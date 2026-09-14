@@ -33,6 +33,27 @@ model Product {
 }
 
 
+
+
+
+
+enum AuthProvider {
+  kakao
+  naver
+}
+model User {
+  id             String       @id @default(cuid())
+  provider       AuthProvider
+  providerUserId String
+  email          String?
+  name           String?
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  @@unique([provider, providerUserId])
+  @@map("users")
+}
+
 // Run this to make table in DB, let the client use it
 // npx prisma migrate dev --name init_shop
 

@@ -1,7 +1,3 @@
-// Classic Prisma 7 schema: Product table + category enum.
-// The database URL lives in backend/.env as DATABASE_URL
-// and is wired in backend/prisma.config.ts.
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -11,6 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
+// 범주형 데이터에 값 제약 넣는 코드 패턴
 enum ProductCategory {
   hair
   scalp
@@ -33,3 +30,28 @@ model Product {
 
   @@map("products")
 }
+
+enum AuthProvider {
+  kakao
+  naver
+}
+
+model User {
+  id             String       @id @default(cuid())
+  provider       AuthProvider
+  providerUserId String
+  email          String?
+  name           String?
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([provider, providerUserId])
+  @@map("users")
+}
+
+// Run this to make table in DB, let the client use it
+// npx prisma migrate dev --name init_shop
+
+// Write Prisma Client code for JS (?)
+// npx prisma generate

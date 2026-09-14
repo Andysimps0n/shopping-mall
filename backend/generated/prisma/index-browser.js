@@ -135,6 +135,17 @@ exports.Prisma.ProductScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.UserScalarFieldEnum = {
+  id: 'id',
+  provider: 'provider',
+  providerUserId: 'providerUserId',
+  email: 'email',
+  name: 'name',
+  avatarUrl: 'avatarUrl',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -155,8 +166,14 @@ exports.ProductCategory = exports.$Enums.ProductCategory = {
   skin: 'skin'
 };
 
+exports.AuthProvider = exports.$Enums.AuthProvider = {
+  kakao: 'kakao',
+  naver: 'naver'
+};
+
 exports.Prisma.ModelName = {
-  Product: 'Product'
+  Product: 'Product',
+  User: 'User'
 };
 
 /**
