@@ -5,8 +5,9 @@ import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { formatPrice, getHeroPhotoSrc } from "@/lib/products";
 
-// Keep this in sync with the CSS animation duration.
+// Keep this in sync with the CSS transition duration on .hero-track.
 const SLIDE_MS = 550;
+const AUTO_PLAY_MS = 6000;
 
 function wrapIndex(index, total) {
   return (index + total) % total;
@@ -20,86 +21,211 @@ function getDirection(from, to, total) {
   return forward <= backward ? "next" : "prev";
 }
 
-function slideClassName(index, activeIndex, exitingIndex, direction) {
-  const classes = ["hero-slide"];
-
-  if (index === activeIndex) {
-    classes.push("is-active");
-    if (exitingIndex !== null) {
-      classes.push(direction === "next" ? "is-enter-next" : "is-enter-prev");
-    }
+/**
+ * The track looks like this (example with 3 products):
+ *
+ *   [clone of last] [0] [1] [2] [clone of first]
+ *         0          1   2   3         4
+ *
+ * We start at 1, the real first slide. Going "next" always moves the
+ * track to the left. When we land on the clone of the first slide, we
+ * snap back to the real first with the transition turned off — so the
+ * loop does not jump backwards.
+ */
+function buildSlides(products) {
+  if (products.length === 0) {
+    return [];
   }
 
-  if (index === exitingIndex) {
-    classes.push("is-exit");
-    classes.push(direction === "next" ? "is-exit-next" : "is-exit-prev");
+  if (products.length === 1) {
+    return [{ product: products[0], slideKey: products[0].id }];
   }
 
-  return classes.join(" ");
+  const last = products[products.length - 1];
+  const first = products[0];
+
+  return [
+    { product: last, slideKey: `clone-last-${last.id}` },
+    ...products.map((product) => ({
+      product,
+      slideKey: product.id,
+    })),
+    { product: first, slideKey: `clone-first-${first.id}` },
+  ];
+}
+
+function productIndexFromTrack(trackIndex, total) {
+  if (total < 2) {
+    return 0;
+  }
+  if (trackIndex === 0) {
+    return total - 1;
+  }
+  if (trackIndex === total + 1) {
+    return 0;
+  }
+  return trackIndex - 1;
 }
 
 export default function HeroCarousel({ products }) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [exitingIndex, setExitingIndex] = useState(null);
+  const total = products.length;
+  const slides = buildSlides(products);
+  const canLoop = total > 1;
+
+  const [trackIndex, setTrackIndex] = useState(canLoop ? 1 : 0);
+  const [enableTransition, setEnableTransition] = useState(true);
   const [direction, setDirection] = useState("next");
   const [hasSlid, setHasSlid] = useState(false);
+  const [isPageHidden, setIsPageHidden] = useState(false);
 
-  const total = products.length;
   const isAnimating = useRef(false);
-  const slideTimer = useRef(null);
+  const goNextRef = useRef(() => {});
+
+  const activeProductIndex = productIndexFromTrack(trackIndex, total);
+  const activeProduct = products[activeProductIndex];
+
+  const snapToRealSlideIfNeeded = useCallback(
+    (index) => {
+      if (!canLoop) {
+        isAnimating.current = false;
+        return;
+      }
+
+      if (index === total + 1) {
+        setEnableTransition(false);
+        setTrackIndex(1);
+      } else if (index === 0) {
+        setEnableTransition(false);
+        setTrackIndex(total);
+      }
+
+      isAnimating.current = false;
+    },
+    [canLoop, total],
+  );
+
+  const goToTrackIndex = useCallback(
+    (nextTrackIndex, nextDirection) => {
+      if (!canLoop || nextTrackIndex === trackIndex || isAnimating.current) {
+        return;
+      }
+
+      setHasSlid(true);
+      setDirection(nextDirection);
+
+      isAnimating.current = true;
+      setEnableTransition(true);
+      setTrackIndex(nextTrackIndex);
+    },
+    [canLoop, trackIndex],
+  );
+
+  const goNext = useCallback(() => {
+    goToTrackIndex(trackIndex + 1, "next");
+  }, [goToTrackIndex, trackIndex]);
+
+  const goPrev = useCallback(() => {
+    goToTrackIndex(trackIndex - 1, "prev");
+  }, [goToTrackIndex, trackIndex]);
+
+  goNextRef.current = goNext;
+
+  const goToProduct = useCallback(
+    (productIndex) => {
+      const nextDirection = getDirection(
+        activeProductIndex,
+        productIndex,
+        total,
+      );
+
+      // Only the wrap-around cases need the cloned slides. A normal
+      // jump (e.g. last → third) uses the real index in the track.
+      if (
+        nextDirection === "prev" &&
+        activeProductIndex === 0 &&
+        productIndex === total - 1
+      ) {
+        goToTrackIndex(0, "prev");
+        return;
+      }
+
+      if (
+        nextDirection === "next" &&
+        activeProductIndex === total - 1 &&
+        productIndex === 0
+      ) {
+        goToTrackIndex(total + 1, "next");
+        return;
+      }
+
+      goToTrackIndex(productIndex + 1, nextDirection);
+    },
+    [activeProductIndex, goToTrackIndex, total],
+  );
 
   useEffect(() => {
+    const onVisibility = () => {
+      setIsPageHidden(document.hidden);
+    };
+
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      if (slideTimer.current) {
-        window.clearTimeout(slideTimer.current);
-      }
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
-  const goTo = useCallback(
-    (index, nextDirection) => {
-      const nextIndex = wrapIndex(index, total);
-      if (nextIndex === activeIndex || isAnimating.current) {
-        return;
-      }
+  // After a clone snap, wait two frames so the browser paints the
+  // jump with transition: none, then turn animation back on.
+  useEffect(() => {
+    if (enableTransition) {
+      return undefined;
+    }
 
-      const prefersReducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (!cancelled) {
+          setEnableTransition(true);
+        }
+      });
+    });
 
-      if (prefersReducedMotion) {
-        setActiveIndex(nextIndex);
-        return;
-      }
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [enableTransition, trackIndex]);
 
-      isAnimating.current = true;
-      setHasSlid(true);
-      setDirection(nextDirection);
-      setExitingIndex(activeIndex);
-      setActiveIndex(nextIndex);
+  // transitionend can be skipped (background tab, reduced motion).
+  // Unlock the carousel and snap off clones even if that happens.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      snapToRealSlideIfNeeded(trackIndex);
+    }, SLIDE_MS + 80);
 
-      if (slideTimer.current) {
-        window.clearTimeout(slideTimer.current);
-      }
+    return () => window.clearTimeout(timer);
+  }, [snapToRealSlideIfNeeded, trackIndex]);
 
-      slideTimer.current = window.setTimeout(() => {
-        setExitingIndex(null);
-        isAnimating.current = false;
-      }, SLIDE_MS);
-    },
-    [activeIndex, total],
-  );
+  useEffect(() => {
+    if (!canLoop || isPageHidden) {
+      return undefined;
+    }
 
-  const goNext = useCallback(
-    () => goTo(activeIndex + 1, "next"),
-    [activeIndex, goTo],
-  );
-  const goPrev = useCallback(
-    () => goTo(activeIndex - 1, "prev"),
-    [activeIndex, goTo],
-  );
+    const timer = window.setInterval(() => {
+      goNextRef.current();
+    }, AUTO_PLAY_MS);
 
-  const activeProduct = products[activeIndex];
+    return () => window.clearInterval(timer);
+  }, [canLoop, isPageHidden, trackIndex]);
+
+  if (!activeProduct) {
+    return null;
+  }
+
+  const trackClassName = enableTransition
+    ? "hero-track"
+    : "hero-track is-instant";
 
   return (
     <section
@@ -108,27 +234,33 @@ export default function HeroCarousel({ products }) {
       aria-label="주요 제품"
     >
       <div className="hero-slides">
-        {products.map((product, index) => (
-          <div
-            key={product.id}
-            className={slideClassName(
-              index,
-              activeIndex,
-              exitingIndex,
-              direction,
-            )}
-            aria-hidden={index !== activeIndex}
-          >
-            <ProductImage
-              name={product.name}
-              categoryLabel={product.categoryLabel}
-              src={getHeroPhotoSrc(product)}
-              cover
-              loading="eager"
-              fetchPriority={index === activeIndex ? "high" : "low"}
-            />
-          </div>
-        ))}
+        <div
+          className={trackClassName}
+          style={{ transform: `translateX(-${trackIndex * 100}%)` }}
+          onTransitionEnd={(event) => {
+            if (event.target !== event.currentTarget) {
+              return;
+            }
+            snapToRealSlideIfNeeded(trackIndex);
+          }}
+        >
+          {slides.map(({ product, slideKey }, index) => (
+            <div
+              key={slideKey}
+              className="hero-slide"
+              aria-hidden={index !== trackIndex}
+            >
+              <ProductImage
+                name={product.name}
+                categoryLabel={product.categoryLabel}
+                src={getHeroPhotoSrc(product)}
+                cover
+                loading={Math.abs(index - trackIndex) <= 1 ? "eager" : "lazy"}
+                fetchPriority={index === trackIndex ? "high" : "low"}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="hero-overlay" aria-hidden="true" />
@@ -195,13 +327,11 @@ export default function HeroCarousel({ products }) {
           <button
             key={product.id}
             type="button"
-            onClick={() =>
-              goTo(index, getDirection(activeIndex, index, total))
-            }
+            onClick={() => goToProduct(index)}
             aria-label={`${index + 1}번째 제품으로 이동`}
-            aria-current={index === activeIndex}
+            aria-current={index === activeProductIndex}
             className={
-              index === activeIndex ? "hero-dot is-active" : "hero-dot"
+              index === activeProductIndex ? "hero-dot is-active" : "hero-dot"
             }
           />
         ))}

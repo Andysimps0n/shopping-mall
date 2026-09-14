@@ -1,6 +1,9 @@
-// DB읽고 Frontend에서 렌더링하는 방식으로 데이터 반환
+// Catalog data for the storefront. Rows live in Postgres (Prisma).
+// We cache the full list so clicking a product card does not wait on
+// a new Neon round-trip every time (the DB is in us-east-2).
 
-
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 import { CATEGORY_LABELS, COLLECTION_SECTIONS } from "./products";
 
@@ -20,16 +23,24 @@ function toStoreProduct(row) {
   };
 }
 
-export async function getProducts() {
+async function fetchProductsFromDb() {
   const rows = await prisma.product.findMany({
     orderBy: { createdAt: "asc" },
   });
   return rows.map(toStoreProduct);
 }
 
+// Cross-request cache: reuse the list for 60 seconds.
+const getCachedProducts = unstable_cache(fetchProductsFromDb, ["catalog-products"], {
+  revalidate: 60,
+});
+
+// Per-request cache: metadata + page + recommendations share one fetch.
+export const getProducts = cache(async () => getCachedProducts());
+
 export async function getProductById(id) {
-  const row = await prisma.product.findUnique({ where: { id } });
-  return row ? toStoreProduct(row) : undefined;
+  const products = await getProducts();
+  return products.find((product) => product.id === id);
 }
 
 export async function getRecommendedProducts(productId, count = 4) {
@@ -39,7 +50,9 @@ export async function getRecommendedProducts(productId, count = 4) {
   if (!current) return others.slice(0, count);
 
   const sameCategory = others.filter((item) => item.category === current.category);
-  const otherCategories = others.filter((item) => item.category !== current.category);
+  const otherCategories = others.filter(
+    (item) => item.category !== current.category,
+  );
   return [...sameCategory, ...otherCategories].slice(0, count);
 }
 

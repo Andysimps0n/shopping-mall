@@ -7,6 +7,9 @@ import {
 } from "@/lib/catalog";
 import { getReviewsByProductId } from "@/lib/reviews";
 
+// Reuse this page for 60 seconds so grid clicks are not a fresh DB trip.
+export const revalidate = 60;
+
 // Pre-build one page per product so each card has a real URL.
 export async function generateStaticParams() {
   const products = await getProducts()

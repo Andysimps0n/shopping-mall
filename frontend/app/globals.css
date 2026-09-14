@@ -239,7 +239,8 @@ svg {
   transition: background-color 150ms ease;
 }
 
-.IconButton:hover {
+.IconButton:hover,
+.IconButton.is-active {
   background-color: var(--color-well);
 }
 
@@ -393,13 +394,12 @@ svg {
   background-color: var(--color-well);
 }
 
-/* Keep every slide in the DOM so the next JPEG is already decoded.
-   Hidden slides use visibility: hidden (not display: none). During a
-   move, the outgoing and incoming slides are both visible and we
-   translate them left or right.
+/* Photos sit in a horizontal row (.hero-track). We slide the whole
+   row with transform: translateX(...). overflow: hidden on this
+   viewport is what clips the next/prev images.
 
-   z-index: 0 here creates a stacking context. That traps .hero-slide's
-   z-index inside the photo layer, so it cannot cover the text / arrows. */
+   z-index: 0 here creates a stacking context. That traps the photo
+   layer so it cannot cover the text / arrows. */
 .hero-slides {
   position: absolute;
   inset: 0;
@@ -407,77 +407,22 @@ svg {
   overflow: hidden;
 }
 
+.hero-track {
+  display: flex;
+  height: 100%;
+  transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-track.is-instant {
+  transition: none;
+}
+
 .hero-slide {
-  position: absolute;
-  inset: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.hero-slide.is-active,
-.hero-slide.is-exit {
-  visibility: visible;
-}
-
-.hero-slide.is-active {
-  z-index: 1;
-  pointer-events: auto;
-}
-
-.hero-slide.is-exit {
-  z-index: 0;
-}
-
-.hero-slide.is-enter-next {
-  animation: hero-slide-in-next 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hero-slide.is-exit-next {
-  animation: hero-slide-out-next 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hero-slide.is-enter-prev {
-  animation: hero-slide-in-prev 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hero-slide.is-exit-prev {
-  animation: hero-slide-out-prev 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes hero-slide-in-next {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes hero-slide-out-next {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-100%);
-  }
-}
-
-@keyframes hero-slide-in-prev {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes hero-slide-out-prev {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(100%);
-  }
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Studio carousel shots are bright white. A pale wash on the left (and
@@ -682,17 +627,6 @@ svg {
 
   .hero-arrow--next {
     right: 1.5rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-slide.is-enter-next,
-  .hero-slide.is-exit-next,
-  .hero-slide.is-enter-prev,
-  .hero-slide.is-exit-prev,
-  .hero-content.is-enter-next,
-  .hero-content.is-enter-prev {
-    animation: none;
   }
 }
 
@@ -921,6 +855,214 @@ svg {
 
   .grid-content {
     margin-top: 3.5rem;
+  }
+}
+
+/* ---------- Loading skeletons ---------- */
+
+.skeleton-box {
+  display: block;
+  background: #e5e5e5;
+  border-radius: 0.2rem;
+}
+
+.hero-skeleton-photo {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+}
+
+.hero-skeleton-title {
+  height: 2rem;
+  width: 88%;
+  margin-top: 0.75rem;
+}
+
+.hero-skeleton-title--second {
+  width: 64%;
+  margin-top: 0.45rem;
+}
+
+.hero-skeleton-name {
+  height: 1rem;
+  width: 42%;
+  margin-top: 1rem;
+}
+
+.hero-skeleton-price {
+  height: 1.125rem;
+  width: 30%;
+  margin-top: 0.35rem;
+}
+
+.hero-skeleton-button {
+  height: 2.75rem;
+  width: 8.5rem;
+  margin-top: 1.5rem;
+  border-radius: 9999px;
+}
+
+.hero-skeleton-arrow {
+  background: #e5e5e5;
+  border: none;
+  backdrop-filter: none;
+  border-radius: 9999px;
+}
+
+.intro-skeleton-heading {
+  height: 1.875rem;
+  width: min(16rem, 80%);
+  margin: 0 auto;
+}
+
+.intro-skeleton-copy {
+  height: 1rem;
+  width: 100%;
+  max-width: 36rem;
+  margin: 1.5rem auto 0;
+}
+
+.intro-skeleton-copy--short {
+  width: 72%;
+  margin-top: 0.7rem;
+}
+
+.intro-skeleton-button {
+  height: 2.75rem;
+  width: 9rem;
+  margin: 2.5rem auto 0;
+  border-radius: 9999px;
+}
+
+.grid-skeleton-heading {
+  height: 1.875rem;
+  width: 8.5rem;
+}
+
+.grid-skeleton-copy {
+  height: 1rem;
+  width: min(18rem, 80%);
+  margin-top: 0.75rem;
+}
+
+.product-card-skeleton-name {
+  height: 0.9375rem;
+  width: 72%;
+}
+
+.product-card-skeleton-rating {
+  height: 0.85rem;
+  width: 5.25rem;
+  margin-top: 0.25rem;
+}
+
+.product-card-skeleton-price {
+  height: 0.9375rem;
+  width: 4.75rem;
+  margin-top: 0.35rem;
+}
+
+@media (min-width: 768px) {
+  .hero-skeleton-title {
+    height: 3rem;
+  }
+
+  .intro-skeleton-heading {
+    height: 2.75rem;
+    width: 22rem;
+  }
+
+  .grid-skeleton-heading {
+    height: 2.25rem;
+    width: 10rem;
+  }
+}
+
+/* ---------- Product loading skeleton (thumb + text lines) ---------- */
+
+.ProductGridSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 4rem var(--page-inset) 5rem;
+}
+
+.ProductSkeleton {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.product-skeleton-thumb {
+  flex-shrink: 0;
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 0.85rem;
+  background: #e5e5e5;
+}
+
+.product-skeleton-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.35rem;
+}
+
+.product-skeleton-line {
+  display: block;
+  height: 0.7rem;
+  border-radius: 0.2rem;
+  background: #e5e5e5;
+}
+
+.product-skeleton-line:nth-child(1) {
+  width: 92%;
+}
+
+.product-skeleton-line:nth-child(2),
+.product-skeleton-line:nth-child(3) {
+  width: 78%;
+}
+
+.product-skeleton-line--short {
+  width: 42%;
+}
+
+.ProductGridSkeleton--flush {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.product-skeleton-thumb,
+.product-skeleton-line,
+.product-page-loading-block,
+.product-page-loading-line,
+.skeleton-box {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-skeleton-thumb,
+  .product-skeleton-line,
+  .product-page-loading-block,
+  .product-page-loading-line,
+  .skeleton-box {
+    animation: none;
   }
 }
 
@@ -1673,6 +1815,26 @@ svg {
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-ink);
+}
+
+.product-page-loading-block {
+  background: var(--color-well);
+}
+
+.product-page-loading-line {
+  height: 0.7rem;
+  width: 48%;
+  margin-bottom: 1rem;
+  background: var(--color-well);
+}
+
+.product-page-loading-line--title {
+  width: 72%;
+  height: 1.6rem;
+}
+
+.product-page-loading-line--short {
+  width: 32%;
 }
 
 .product-page-actions {
@@ -2638,6 +2800,211 @@ svg {
     position: sticky;
     top: 5.5rem;
   }
+}
+
+/* ---------- Login page ---------- */
+
+.LoginPage {
+  min-height: 50vh;
+  padding-top: 3rem;
+  padding-bottom: 4.5rem;
+}
+
+.login-page-wrapper {
+  max-width: var(--page-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.login-panel {
+  max-width: 24.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.login-eyebrow {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--color-brand);
+}
+
+.login-heading {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.login-lead {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.login-account-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 1.75rem;
+  padding: 0.3rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 9999px;
+  background-color: var(--color-wash);
+}
+
+.login-account-option {
+  padding: 0.65rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.login-account-option:hover {
+  color: var(--color-ink);
+}
+
+.login-account-option.is-selected {
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.login-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1.75rem;
+}
+
+.login-provider {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.7rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: filter 150ms ease;
+}
+
+.login-provider:hover {
+  filter: brightness(0.96);
+}
+
+.login-provider-mark {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.login-provider--naver {
+  background-color: #03c75a;
+  color: var(--color-white);
+}
+
+.login-provider--kakao {
+  background-color: #fee500;
+  color: #191919;
+}
+
+.login-provider--google {
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+
+.login-provider--google:hover {
+  filter: none;
+  background-color: var(--color-well);
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1.5rem 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-hairline);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.login-field-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.login-field input {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 0.7rem;
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.login-field input::placeholder {
+  color: #b3b3b3;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: 0.35rem;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.9375rem;
+}
+
+.login-footnote {
+  margin: 1.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.login-footnote a {
+  color: var(--color-brand);
+}
+
+.login-footnote a:hover {
+  color: var(--color-brand-hover);
 }
 
 /* ---------- Footer ---------- */

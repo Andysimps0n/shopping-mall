@@ -71,6 +71,22 @@ function IconButton({ label, children }) {
   );
 }
 
+function LoginLink() {
+  const pathname = usePathname();
+  const isActive = pathname === "/login";
+
+  return (
+    <Link
+      href="/login"
+      aria-label="로그인"
+      aria-current={isActive ? "page" : undefined}
+      className={isActive ? "IconButton is-active" : "IconButton"}
+    >
+      <UserIcon />
+    </Link>
+  );
+}
+
 // Cart opens the /cart page. The count badge waits until the provider has
 // hydrated from localStorage so we do not flash a wrong number on first paint.
 function CartLink() {
@@ -154,9 +170,7 @@ export default function Header() {
           <IconButton label="알림">
             <BellIcon />
           </IconButton>
-          <IconButton label="로그인">
-            <UserIcon />
-          </IconButton>
+          <LoginLink />
           <CartLink />
         </div>
       </div>
