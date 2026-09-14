@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { brand } from "@/frontend/lib/brand";
+import { brand } from "@/lib/brand";
 
 // Small line icons for the 6無 cards. Same stroke language as the header
 // icons — thin, round caps, no fill — so the brand page does not suddenly

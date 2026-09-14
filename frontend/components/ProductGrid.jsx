@@ -1,11 +1,9 @@
 import ProductCard from "./ProductCard";
-import { getCollectionSections } from "@/frontend/lib/products";
 
 // Home catalog under the hero. Each category is its own grid so
 // 헤어 케어 and 피부 케어 read as equal, top-level titles — matching
 // the header links, not as children under a "Collection" label.
-export default function ProductGrid() {
-  const sections = getCollectionSections();
+export default function ProductGrid({ sections }) {
 
   return (
     <div id="collection">

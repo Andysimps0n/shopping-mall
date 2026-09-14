@@ -6,8 +6,8 @@ import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
 import ProductPlaceholderBanner from "./ProductPlaceholderBanner";
 import ProductReviews from "./ProductReviews";
-import { getProductBanner } from "@/frontend/lib/productBanners";
-import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/frontend/lib/products";
+import { getProductBanner } from "@/lib/productBanners";
+import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/products";
 
 /**
  * Product detail layout:

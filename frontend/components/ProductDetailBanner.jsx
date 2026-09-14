@@ -14,7 +14,7 @@ import { useId, useState } from "react";
  *
  * @param {object} props
  * @param {object} props.product
- * @param {import("@/frontend/lib/productBanners").ProductBanner} props.banner
+ * @param {import("@/lib/productBanners").ProductBanner} props.banner
  * @param {string} [props.imageSrc] Real photo path, if one exists in /public.
  */
 export default function ProductDetailBanner({ product, banner, imageSrc }) {

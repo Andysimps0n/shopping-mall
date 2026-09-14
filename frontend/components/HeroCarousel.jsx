@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
-import { formatPrice, getHeroPhotoSrc, products } from "@/frontend/lib/products";
+import { formatPrice, getHeroPhotoSrc } from "@/lib/products";
 
 // Keep this in sync with the CSS animation duration.
 const SLIDE_MS = 550;
@@ -38,7 +38,7 @@ function slideClassName(index, activeIndex, exitingIndex, direction) {
   return classes.join(" ");
 }
 
-export default function HeroCarousel() {
+export default function HeroCarousel({ products }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [exitingIndex, setExitingIndex] = useState(null);
   const [direction, setDirection] = useState("next");

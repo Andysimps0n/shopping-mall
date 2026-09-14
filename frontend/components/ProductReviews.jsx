@@ -1,5 +1,5 @@
 import StarRating from "./StarRating";
-import { getAverageRating } from "@/frontend/lib/reviews";
+import { getAverageRating } from "@/lib/reviews";
 
 /**
  * Customer reviews block on the product page.

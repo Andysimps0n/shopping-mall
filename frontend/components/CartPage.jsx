@@ -7,8 +7,8 @@ import {
   CART_MAX_QUANTITY,
   getCartLines,
   getCartTotal,
-} from "@/frontend/lib/cart";
-import { formatPrice, getProductPhotoSrc } from "@/frontend/lib/products";
+} from "@/lib/cart";
+import { formatPrice, getProductPhotoSrc } from "@/lib/products";
 
 /**
  * Full-page cart: line items on the left, order summary on the right.

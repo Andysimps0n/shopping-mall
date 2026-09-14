@@ -11,5 +11,18 @@
     "dev:backend": "npm run studio --workspace=backend",
     "build": "npm run build --workspace=frontend",
     "studio": "npm run studio --workspace=backend"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.10.0"
+  },
+  "overrides": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
   }
 }

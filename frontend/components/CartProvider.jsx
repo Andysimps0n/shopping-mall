@@ -16,8 +16,8 @@ import {
   normalizeCartItems,
   removeItem as removeItemFromCart,
   setQuantity as setItemQuantity,
-} from "@/frontend/lib/cart";
-import { getProductById } from "@/frontend/lib/products";
+} from "@/lib/cart";
+import { getProductById } from "@/lib/products";
 import CartToast from "./CartToast";
 
 const CartContext = createContext(null);

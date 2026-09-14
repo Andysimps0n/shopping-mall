@@ -1,14 +1,19 @@
 import HeroCarousel from "@/components/HeroCarousel";
 import ProductGrid from "@/components/ProductGrid";
 import BrandIntro from "@/components/BrandIntro";
+import { getProducts, getCollectionSections } from "@/lib/catalog";
 
-export default function Home() {
+
+export default async function Home() {
+  const products = await getProducts();
+  const sections = await getCollectionSections();
+
+
   return (
     <main className="Home">
-      {/* Visual rhythm: hero carousel → 3-column product grid → brand */}
-      <HeroCarousel />
+      <HeroCarousel products={products} />
       <BrandIntro />
-      <ProductGrid />
+      <ProductGrid sections={sections} />
     </main>
   );
 }

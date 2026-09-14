@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
 import StarRating from "./StarRating";
-import { formatPrice, getProductPhotoSrc } from "@/frontend/lib/products";
-import { getReviewSummary } from "@/frontend/lib/reviews";
+import { formatPrice, getProductPhotoSrc } from "@/lib/products";
+import { getReviewSummary } from "@/lib/reviews";
 
 // A thin-line heart used for the wishlist toggle. Fills with the brand color
 // when active. This is UI only — nothing is persisted.
