@@ -1,8 +1,8 @@
 /**
- * Login-page copy and Kakao / Naver start URLs.
+ * Login-page copy, Kakao / Naver start URLs, and session helpers.
  * Keep claims and contact details in sync with brand.js —
  * this file is the account-type labels, login-method wording,
- * and the backend URL the login buttons navigate to.
+ * the backend URL the login buttons navigate to, and /auth/me + /auth/logout.
  */
 
 /** @typedef {"consumer" | "b2b"} AccountType */
@@ -67,6 +67,38 @@ export function getSocialLoginStartUrl(provider) {
     throw new Error(`Unsupported provider: ${provider}`);
   }
   return `${API_BASE_URL}/auth/${provider}`;
+}
+
+/**
+ * Ask the API who the mall_session cookie belongs to.
+ * credentials: "include" is required so the browser actually sends that cookie
+ * to localhost:4000 (a different origin from the Next.js app).
+ *
+ * @returns {Promise<{id: string, provider: string, name: string|null, email: string|null, avatarUrl: string|null}|null>}
+ */
+export async function fetchCurrentUser() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tell the API to clear mall_session. Same credentials rule as fetchCurrentUser. */
+export async function logout() {
+  try {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch {
+    // Header still treats the shopper as logged out locally.
+  }
 }
 
 /**

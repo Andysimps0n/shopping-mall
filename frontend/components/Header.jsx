@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { fetchCurrentUser, logout } from "@/lib/auth";
 import { useCart } from "./CartProvider";
 
 // Small, self-contained icon set. Inline SVGs keep the header dependency-free
@@ -21,24 +22,6 @@ function BellIcon() {
     >
       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="UserIcon icon"
-      aria-hidden="true"
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }
@@ -73,16 +56,54 @@ function IconButton({ label, children }) {
 
 function LoginLink() {
   const pathname = usePathname();
+  const [user, setUser] = useState(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchCurrentUser().then((nextUser) => {
+      if (!cancelled) {
+        setUser(nextUser);
+        setHasLoaded(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  async function handleLogout() {
+    await logout();
+    setUser(null);
+  }
+
+  if (!hasLoaded) {
+    return (
+      <span className="header-session header-session--pending" aria-hidden="true">
+        로그인
+      </span>
+    );
+  }
+
+  if (user) {
+    return (
+      <button type="button" className="header-session" onClick={handleLogout}>
+        로그아웃
+      </button>
+    );
+  }
+
   const isActive = pathname === "/login";
 
   return (
     <Link
       href="/login"
-      aria-label="로그인"
+      className={isActive ? "header-session is-active" : "header-session"}
       aria-current={isActive ? "page" : undefined}
-      className={isActive ? "IconButton is-active" : "IconButton"}
     >
-      <UserIcon />
+      로그인
     </Link>
   );
 }
