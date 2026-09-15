@@ -45,7 +45,7 @@ export function setSessionCookie(res, userId) {
 
 export function clearSessionCookie(res) {
   res.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
+    httpOnly: true.
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",

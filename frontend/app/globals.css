@@ -2563,6 +2563,55 @@ svg {
   }
 }
 
+/* ---------- 404 ---------- */
+
+.NotFound {
+  min-height: 50vh;
+  padding-top: 4rem;
+  padding-bottom: 5rem;
+}
+
+.not-found-wrapper {
+  max-width: 36rem;
+}
+
+.not-found-eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.not-found-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.not-found-copy {
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+.not-found-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--color-white);
+  background: var(--color-brand);
+  text-decoration: none;
+}
+
+.not-found-cta:hover {
+  background: var(--color-brand-hover);
+}
+
 /* ---------- Cart page ---------- */
 
 .CartPage {
