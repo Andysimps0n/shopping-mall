@@ -2,6 +2,7 @@ import { Playfair_Display } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/components/CartProvider";
+import { WishlistProvider } from "@/components/WishlistProvider";
 import "./globals.css";
 
 // Elegant high-contrast serif for the AnnChloe wordmark (matches reference logo).
@@ -13,9 +14,15 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  title: "Ann Chloe · 앤클로에",
+  title: "AnnChloe, 앤클로이",
   description:
     "Ann Chloe Beauty People — 살롱이 큐레이션한 헤어, 두피, 스킨 케어 컬렉션.",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {
@@ -23,9 +30,11 @@ export default function RootLayout({ children }) {
     <html lang="ko" className={playfair.variable}>
       <body>
         <CartProvider>
-          <Header />
-          {children}
-          <Footer />
+          <WishlistProvider>
+            <Header />
+            {children}
+            <Footer />
+          </WishlistProvider>
         </CartProvider>
       </body>
     </html>

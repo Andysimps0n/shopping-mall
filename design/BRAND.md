@@ -57,11 +57,12 @@
 - 히어로 와이드: `frontend/public/carousel/`
 - 브랜드 라인업 등: `frontend/public/brand/`
 - 디자인 레퍼런스 PNG: `design/brand-*.png`
+- 제품 포스터(에이전트): `design/POSTER.md`
 - 3D/렌더 원본(리포 밖): `Desktop/models/`, Blender MCP(`blendmcp`)로 작업 가능
 
 ## 페이지별 카피 힌트
 - **홈:** 제품 `tagline`은 줄바꿈(`\n`) 가능. 히어로는 와이드 컷
-- **브랜드:** `brand.js` 섹션 순서 유지 (철학 → 6無 → 도전 → 턴오버 → 미네랄 → 바이알 → 후기)
+- **브랜드:** `brand.js` 섹션 순서 유지 (철학 → 6無 → 도전 → 미네랄 → 바이알 → 후기)
 - **PDP:** `story` + 배너(`productBanners.js`). 카탈로그에 없는 효능 단락 추가 금지
 
 ## 에이전트가 새 카피를 쓸 때 체크리스트

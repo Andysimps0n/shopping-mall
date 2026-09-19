@@ -3,6 +3,7 @@ import ProductCard from "./ProductCard";
 // Home catalog under the hero. Each category is its own grid so
 // 헤어 케어 and 피부 케어 read as equal, top-level titles — matching
 // the header links, not as children under a "Collection" label.
+// Layout lives in CSS: 2 columns on phones, 3 on desktop.
 export default function ProductGrid({ sections }) {
 
   return (

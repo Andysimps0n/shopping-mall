@@ -1,9 +1,11 @@
 import Link from "next/link";
 import AddToCartButton from "./AddToCartButton";
+import WishlistButton from "./WishlistButton";
 import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
 import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
+import ProductInformation from "./ProductInformation";
 import ProductPlaceholderBanner from "./ProductPlaceholderBanner";
 import ProductReviews from "./ProductReviews";
 import { getProductBanner } from "@/lib/productBanners";
@@ -13,7 +15,8 @@ import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/p
  * Product detail layout:
  * - Left column (majority of the width): large product image, then a long banner.
  * - Right column: name, story, price, buy button. Stays sticky while you scroll.
- * - Below: customer reviews, then four recommended product cards.
+ * - Below: customer reviews, four recommended product cards, then the
+ *   INFORMATION label table (용량·전성분·주의사항).
  *
  * The long banner is opt-in per product. If `getProductBanner(id)` returns
  * content, we render the editorial story. Products without an entry keep
@@ -59,11 +62,9 @@ export default function ProductDetail({ product, recommended, reviews }) {
               </Link>
             </nav>
 
-            <p className="product-page-category">{product.categoryLabel}</p>
             <h1 id="product-name" className="product-page-name">
               {product.name}
             </h1>
-            <p className="product-page-tagline">{product.tagline}</p>
             <p className="product-page-description">{product.description}</p>
             <p className="product-page-story">{product.story}</p>
             <p className="product-page-price">{formatPrice(product.price)}</p>
@@ -73,6 +74,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
                 구매하기
               </button>
               <AddToCartButton productId={product.id} />
+              <WishlistButton productId={product.id} />
             </div>
           </div>
         </aside>
@@ -96,6 +98,8 @@ export default function ProductDetail({ product, recommended, reviews }) {
           </div>
         </div>
       </section>
+
+      <ProductInformation product={product} />
     </main>
   );
 }

@@ -25,6 +25,7 @@
 | DB 모델 | `backend/prisma/schema.prisma` |
 | 브랜드 보이스·클레임 규칙 | `design/BRAND.md` |
 | 색·타이포·레이아웃 토큰 | `design/DESIGN-apple.md` |
+| 제품 포스터(인쇄·마케팅) | `design/POSTER.md` |
 
 카피/제품명을 바꿀 때는 컴포넌트에 하드코딩하지 말고 위 lib 파일을 고치세요.
 PDF·추출본에 없는 **의료·효능 수치·보장**을 새로 만들지 마세요. (`brand.js` 주석과 동일)
@@ -56,4 +57,4 @@ PDF·추출본에 없는 **의료·효능 수치·보장**을 새로 만들지 �
 
 ## 빠른 검증
 - `npm run dev` (루트) 후 홈·브랜드·PDP·카트 스모크
-- 제품 추가 시 `products.js` + `public/products` + `public/carousel` + (DB 사용 시) Prisma `Product` 동기화
+- 제품 추가 시 `products.js` + `public/products` + `public/carousel`

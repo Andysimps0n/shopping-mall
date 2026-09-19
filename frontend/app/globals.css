@@ -36,6 +36,9 @@
     var(--page-gutter),
     calc((100vw - var(--page-max)) / 2 + var(--page-gutter))
   );
+
+  --header-height: 4rem;
+  --tabbar-height: 3.5rem;
 }
 
 @media (min-width: 768px) {
@@ -68,6 +71,10 @@ body {
   font-family: var(--font-pretendard);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Wrap only at spaces — never split a Korean (or English) word mid-glyph. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 h1,
@@ -161,24 +168,11 @@ svg {
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition:
-    background-color 200ms ease,
-    border-color 200ms ease,
-    backdrop-filter 200ms ease;
-}
-
-/* Hero sits *under* this bar, so a lighter fill lets the photo show through
-   the blur instead of a hard white strip. */
-.Header.is-over-hero {
-  background-color: rgba(255, 255, 255, 0.22);
-  border-bottom-color: transparent;
-  backdrop-filter: blur(20px) saturate(1.2);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
 
 .header-wrapper {
   display: flex;
-  height: 4rem;
+  height: var(--header-height);
   align-items: center;
   justify-content: space-between;
 }
@@ -269,8 +263,8 @@ svg {
   background-color: var(--color-well);
 }
 
-/* Cart icon is a Link that reuses .IconButton; badge sits on the corner. */
-.CartLink {
+/* Icon links that carry a count badge on the corner. */
+.CountLink {
   position: relative;
 }
 
@@ -405,18 +399,115 @@ svg {
   }
 }
 
+/* Mobile app tab bar — hidden on desktop, shown under 768px. */
+.header-mobile {
+  display: none;
+}
+
+.header-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 0;
+  min-height: var(--tabbar-height);
+  padding: 0.35rem 0.2rem 0.4rem;
+  color: var(--color-muted);
+  transition: color 150ms ease;
+}
+
+.header-tab.is-active {
+  color: var(--color-brand);
+}
+
+.header-tab-icon {
+  position: relative;
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-tab-icon .icon {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.header-tab-icon .cart-badge {
+  top: -0.35rem;
+  right: -0.55rem;
+}
+
+.header-tab-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.header-tab--pending {
+  visibility: hidden;
+}
+
+@media (max-width: 767px) {
+  .Header {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-bottom: none;
+    border-top: 1px solid var(--color-hairline);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .header-wrapper {
+    display: none;
+  }
+
+  .header-mobile {
+    display: flex;
+    height: var(--tabbar-height);
+    align-items: stretch;
+  }
+
+  body {
+    padding-bottom: calc(
+      var(--tabbar-height) + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  .CartToast {
+    bottom: calc(
+      var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + 0.75rem
+    );
+  }
+}
+
 /* ---------- Hero carousel ---------- */
 
 .HeroCarousel {
   position: relative;
   width: 100%;
-  /* Full viewport, pulled up under the 4rem header so the photo is what
-     the header's backdrop-filter actually blurs. */
-  height: 100vh;
+  /* Sit below the 4rem header instead of tucking under it.
+     calc keeps the first screen one viewport tall: header + hero. */
+  height: calc(100vh - var(--header-height));
   min-height: 420px;
-  margin-top: -4rem;
   overflow: hidden;
   background-color: var(--color-well);
+}
+
+@media (max-width: 767px) {
+  .HeroCarousel {
+    /* No top header on mobile — fill the space above the tab bar. */
+    height: calc(
+      100dvh - var(--tabbar-height) - env(safe-area-inset-bottom, 0px)
+    );
+  }
 }
 
 /* Photos sit in a horizontal row (.hero-track). We slide the whole
@@ -450,20 +541,96 @@ svg {
   overflow: hidden;
 }
 
-/* Studio carousel shots are bright white. A pale wash on the left (and
-   from the bottom on small screens) keeps dark type readable without
-   hiding the bottle in the middle of the frame. */
+/* Each slide pans its photo independently with --hero-object-x / --hero-object-y.
+   object-fit: cover still fills the frame; these two values pick which part
+   of the photo stays visible.
+
+   x: 0% = left,  50% = center, 100% = right
+   y: 0% = top,   50% = center, 100% = bottom
+   Raise the bottle → lower y (e.g. 30%). Lower the bottle → raise y (e.g. 70%). */
+.HeroCarousel .product-image-photo {
+  object-position: var(--hero-object-x, 50%) var(--hero-object-y, 50%);
+}
+
+/* --- Mobile (default, under 768px) --- */
+/* 1. 두피 샴푸 — /carousel/shampoo_wide.jpg
+   The wide shot is landscape. On a tall phone it already fills the
+   height, so object-position-y does not move it. We stretch the img
+   a bit taller and pull it up so the bottle sits higher (top crops). */
+.hero-slide--silk-repair-shampoo {
+  --hero-object-x: 50%;
+  --hero-object-y: 100%;
+}
+
+.hero-slide--silk-repair-shampoo .product-image-photo {
+  top: -12%;
+  height: 118%;
+  bottom: auto;
+}
+
+/* 2. 모발 & 두피 미스트 — /carousel/mist_wide.jpg */
+.hero-slide--moisture-glow-treatment {
+  --hero-object-x: 50%;
+  --hero-object-y: 50%;
+}
+
+/* 3. 스킨&바디 보습 로션 — /carousel/lotion_wide.jpg */
+.hero-slide--volume-lift-essence {
+  --hero-object-x: 50%;
+  --hero-object-y: 50%;
+}
+
+/* 4. 버블 워시 — /carousel/bubblewash_wide.jpg */
+.hero-slide--scalp-balance-tonic {
+  --hero-object-x: 50%;
+  --hero-object-y: 50%;
+}
+
+/* 5. EGF 앰플 — /carousel/ampule_wide.jpg */
+.hero-slide--scalp-deep-cleanser {
+  --hero-object-x:  65%;
+  --hero-object-y: 50%;
+}
+
+/* 6. 두피 팩 — /carousel/scalppack_wide.jpg */
+.hero-slide--hydra-calming {
+  --hero-object-x: 62%;
+  --hero-object-y: 50%;
+}
+
+/* 7. 얼굴 팩 — /carousel/facepack_wide.jpg */
+.hero-slide--radiance-serum {
+  --hero-object-x: 50%;
+  --hero-object-y: 50%;
+}
+
+/* Frosted blur from the bottom so type stays readable without a
+   solid white sheet. mask-image fades the blur out — same vh stops
+   as before.
+
+   --hero-overlay-solid = full blur this far from the bottom
+   --hero-overlay-end   = blur fully gone here */
 .hero-overlay {
   pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(
+  --hero-overlay-solid: 10vh;
+  --hero-overlay-end: 40vh;
+  background-color: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(32px) saturate(1.15);
+  -webkit-backdrop-filter: blur(32px) saturate(1.15);
+  mask-image: linear-gradient(
     to top,
-    rgba(255, 255, 255, 0.94) 0%,
-    rgba(255, 255, 255, 0.72) 26%,
-    rgba(255, 255, 255, 0.18) 48%,
-    transparent 68%
+    #000 0,
+    #000 var(--hero-overlay-solid),
+    transparent var(--hero-overlay-end)
+  );
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0,
+    #000 var(--hero-overlay-solid),
+    transparent var(--hero-overlay-end)
   );
 }
 
@@ -474,7 +641,7 @@ svg {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding-top: 5.5rem;
+  padding-top: 2rem;
   padding-bottom: 4.5rem;
 }
 
@@ -614,6 +781,55 @@ svg {
 }
 
 @media (min-width: 768px) {
+  /* --- PC (768px and up) --- */
+  /* 1. 두피 샴푸 */
+  .hero-slide--silk-repair-shampoo {
+    --hero-object-x: 1000%;
+    --hero-object-y: 70%;
+  }
+
+  .hero-slide--silk-repair-shampoo .product-image-photo {
+    top: 0;
+    height: 100%;
+    bottom: 0;
+  }
+
+  /* 2. 모발 & 두피 미스트 */
+  .hero-slide--moisture-glow-treatment {
+    --hero-object-x: 100%;
+    --hero-object-y: 70%;
+  }
+
+  /* 3. 스킨&바디 보습 로션 */
+  .hero-slide--volume-lift-essence {
+    --hero-object-x: 50%;
+    --hero-object-y: 40%;
+  }
+
+  /* 4. 버블 워시 */
+  .hero-slide--scalp-balance-tonic {
+    --hero-object-x: 50%;
+    --hero-object-y: 80%;
+  }
+
+  /* 5. EGF 앰플 */
+  .hero-slide--scalp-deep-cleanser {
+    --hero-object-x: 50%;
+    --hero-object-y: 30%;
+  }
+
+  /* 6. 두피 팩 */
+  .hero-slide--hydra-calming {
+    --hero-object-x: 50%;
+    --hero-object-y: 50%;
+  }
+
+  /* 7. 얼굴 팩 */
+  .hero-slide--radiance-serum {
+    --hero-object-x: 100%;
+    --hero-object-y: 80%;
+  }
+
   .hero-overlay {
     background: linear-gradient(
       90deg,
@@ -622,6 +838,11 @@ svg {
       rgba(255, 255, 255, 0.12) 48%,
       transparent 62%
     );
+    background-color: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    mask-image: none;
+    -webkit-mask-image: none;
   }
 
   .hero-wrapper {
@@ -680,7 +901,7 @@ svg {
 }
 
 .ProductImage--detail {
-  width: 100%;
+  width: 60%;
   aspect-ratio: 1 / 1;
 }
 
@@ -737,6 +958,7 @@ svg {
 .product-card-link {
   display: block;
   color: inherit;
+  cursor: pointer;
 }
 
 .product-card-media {
@@ -744,12 +966,13 @@ svg {
   overflow: hidden;
   border-radius: 0.85rem;
   background-color: var(--color-well);
-  box-shadow: 0 8px 24px rgba(26, 26, 26, 0.08);
-  transition: box-shadow 180ms ease;
+  /* White studio shots need a visible edge against the white page. */
+  border: 1px solid rgba(26, 26, 26, 0.14);
+  transition: border-color 180ms ease;
 }
 
 .ProductCard:hover .product-card-media {
-  box-shadow: 0 12px 28px rgba(26, 26, 26, 0.12);
+  border-color: rgba(26, 26, 26, 0.28);
 }
 
 .product-card-wishlist {
@@ -819,17 +1042,59 @@ svg {
   color: var(--color-ink);
 }
 
+.product-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.55rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-brand);
+}
+
+.product-card-cta-icon {
+  width: 0.8rem;
+  height: 0.8rem;
+  transition: transform 160ms ease;
+}
+
 .ProductCard:hover .product-card-name {
   color: var(--color-brand);
 }
 
-/* ---------- Product grid (3-column catalog under the hero) ---------- */
+.ProductCard:hover .product-card-cta,
+.product-card-link:focus-visible .product-card-cta {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.ProductCard:hover .product-card-cta-icon,
+.product-card-link:focus-visible .product-card-cta-icon {
+  transform: translateX(3px);
+}
+
+/* ---------- Product grid (catalog under the hero) ---------- */
+/*
+  Columns:
+    phone   — 2 cards per row (smaller tiles, like a shop catalog)
+    tablet  — still 2, with more generous gaps
+    desktop — 3
+  minmax(0, 1fr) lets a long product name shrink instead of blowing
+  out the column.
+*/
 
 .ProductGrid {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
   /* Sticky header is 4rem. Extra room so the section title is not hidden. */
   scroll-margin-top: 5.5rem;
+}
+
+@media (max-width: 767px) {
+  .ProductGrid {
+    scroll-margin-top: 1rem;
+  }
 }
 
 .grid-heading {
@@ -849,21 +1114,20 @@ svg {
 
 .grid-content {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem 1.25rem;
-  margin-top: 2.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem 0.75rem;
+  margin-top: 2rem;
 }
 
 @media (min-width: 640px) {
   .grid-content {
-    grid-template-columns: repeat(2, 1fr);
     gap: 2.75rem 1.5rem;
   }
 }
 
 @media (min-width: 900px) {
   .grid-content {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 3rem 1.75rem;
   }
 }
@@ -880,6 +1144,67 @@ svg {
 
   .grid-content {
     margin-top: 3.5rem;
+  }
+}
+
+/* Phone catalog cards are half-width, so type, heart, and chrome
+   shrink to match. Scoped to .grid-content so the PDP recommend
+   row (still one column on phones) keeps its current size. */
+@media (max-width: 639px) {
+  .grid-content .product-card-media {
+    border-radius: 0.65rem;
+  }
+
+  .grid-content .product-card-wishlist {
+    top: 0.4rem;
+    right: 0.4rem;
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .grid-content .product-card-wishlist .HeartIcon {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  .grid-content .product-card-content {
+    margin-top: 0.65rem;
+  }
+
+  .grid-content .product-card-name {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    /* Always reserve two lines so prices in the same row line up. */
+    min-height: 2.7em;
+  }
+
+  .grid-content .product-card-rating {
+    margin-top: 0.15rem;
+    gap: 0.25rem;
+  }
+
+  .grid-content .product-card-rating .StarIcon {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+
+  .grid-content .product-card-rating-count {
+    font-size: 0.75rem;
+  }
+
+  .grid-content .product-card-price {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+  }
+
+  /* "자세히 보기" is extra chrome once the tile is this small. */
+  .grid-content .product-card-cta {
+    display: none;
   }
 }
 
@@ -985,6 +1310,12 @@ svg {
   height: 0.9375rem;
   width: 4.75rem;
   margin-top: 0.35rem;
+}
+
+.product-card-skeleton-cta {
+  height: 0.8125rem;
+  width: 5.25rem;
+  margin-top: 0.55rem;
 }
 
 @media (min-width: 768px) {
@@ -1153,8 +1484,6 @@ svg {
 .BrandPage {
   padding-top: 0;
   padding-bottom: 0;
-  word-break: keep-all;
-  overflow-wrap: break-word;
 }
 
 .brand-hero {
@@ -1167,10 +1496,21 @@ svg {
   padding-bottom: 4.5rem;
 }
 
+/*
+  Narrow centered reading column. Do not put .container on this box.
+
+  .container uses --page-inset, which grows with the viewport so a
+  FULL-WIDTH bar stays aligned to the 1200px page column. On a 42rem
+  (~672px) box that same padding is subtracted from both sides, so the
+  text column shrinks as the window gets wider (around 1600px+ the
+  heading starts wrapping almost one word per line).
+*/
 .brand-hero-copy {
   max-width: 42rem;
   margin-left: auto;
   margin-right: auto;
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
   text-align: center;
 }
 
@@ -1358,37 +1698,41 @@ svg {
 
 .brand-free-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
   margin-top: 2.25rem;
   max-width: none;
 }
 
 .brand-free-card {
-  padding: 1.4rem 1.2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.1rem 0.75rem 1.15rem;
   background-color: var(--color-white);
   border: 1px solid var(--color-hairline);
 }
 
+.free-icon,
 .brand-free-icon {
   width: 1.5rem;
   height: 1.5rem;
+  flex-shrink: 0;
   color: var(--color-brand);
 }
 
 .brand-free-title {
-  margin-top: 0.85rem;
-  font-size: 1.05rem;
+  margin-top: 0.65rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--color-ink);
 }
 
+/* Mobile: icon + name only. Descriptions return from 640px up. */
 .brand-free-copy {
-  margin-top: 0.45rem;
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  color: var(--color-muted);
+  display: none;
 }
 
 .brand-compare {
@@ -1449,6 +1793,8 @@ svg {
   max-width: 42rem;
   margin-left: auto;
   margin-right: auto;
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
 }
 
 .brand-quote-text {
@@ -1499,10 +1845,11 @@ svg {
 }
 
 .brand-stat-value {
-  font-family: var(--font-display);
+  font-family: var(--font-pretendard);
   font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-brand);
 }
 
@@ -1589,6 +1936,26 @@ svg {
 
   .brand-free-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .brand-free-card {
+    align-items: flex-start;
+    text-align: left;
+    padding: 1.4rem 1.2rem 1.5rem;
+  }
+
+  .brand-free-title {
+    margin-top: 0.85rem;
+    font-size: 1.05rem;
+  }
+
+  .brand-free-copy {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-muted);
   }
 
   .brand-approach-grid {
@@ -1683,9 +2050,12 @@ svg {
 
 /* ---------- Product page ---------- */
 
+/* Same horizontal edges as the header (.container uses --page-inset). */
 .product-page-layout {
   display: grid;
   grid-template-columns: 1fr;
+  padding-left: var(--page-inset);
+  padding-right: var(--page-inset);
 }
 
 .product-page-gallery {
@@ -1720,6 +2090,9 @@ svg {
 
 .product-page-media {
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .product-page-back {
@@ -1784,7 +2157,8 @@ svg {
 
 .product-page-info {
   border-top: 1px solid var(--color-hairline);
-  padding: 2rem var(--page-inset) 3rem;
+  /* Horizontal inset lives on .product-page-layout (matches the header). */
+  padding: 2rem 0 3rem;
 }
 
 .product-page-breadcrumb {
@@ -1864,6 +2238,7 @@ svg {
 
 .product-page-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
@@ -1873,6 +2248,28 @@ svg {
   flex: 1;
   padding: 0.95rem 1.25rem;
   font-size: 1rem;
+}
+
+.product-page-wishlist {
+  flex: 0 0 3.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-hairline);
+  border-radius: 9999px;
+  color: var(--color-ink);
+  transition: color 150ms ease, border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.product-page-wishlist:hover,
+.product-page-wishlist.is-active {
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.product-page-wishlist.is-active {
+  background-color: var(--color-well);
 }
 
 .ProductReviews {
@@ -1969,7 +2366,7 @@ svg {
 
 .ProductRecommend {
   padding-top: 4rem;
-  padding-bottom: 5rem;
+  padding-bottom: 4rem;
   border-top: 1px solid var(--color-hairline);
 }
 
@@ -1985,6 +2382,82 @@ svg {
   grid-template-columns: 1fr;
   gap: 1.5rem;
   margin-top: 2rem;
+}
+
+/* ---------- Product information (legal label table) ---------- */
+
+.ProductInformation {
+  padding-top: 3rem;
+  padding-bottom: 4rem;
+  border-top: 1px solid var(--color-hairline);
+  background-color: var(--color-well);
+}
+
+.product-information-card {
+  padding: 2.25rem 1.25rem 1.5rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 1rem;
+  background-color: var(--color-white);
+}
+
+.product-information-heading {
+  margin: 0 0 1.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-align: center;
+  color: var(--color-ink);
+}
+
+.product-information-list {
+  margin: 0;
+}
+
+.product-information-row {
+  display: grid;
+  grid-template-columns: 6.75rem minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.product-information-row:last-child {
+  padding-bottom: 0.35rem;
+}
+
+.product-information-label,
+.product-information-value {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+
+.product-information-label {
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.product-information-value {
+  color: var(--color-ink);
+}
+
+.product-information-cautions {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.product-information-cautions li + li {
+  margin-top: 0.55rem;
+}
+
+.product-information-subcautions {
+  margin: 0.4rem 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.product-information-subcautions li {
+  margin-top: 0.2rem;
 }
 
 @media (min-width: 640px) {
@@ -2025,11 +2498,36 @@ svg {
 
   .ProductRecommend {
     padding-top: 5rem;
-    padding-bottom: 7rem;
+    padding-bottom: 5rem;
   }
 
   .recommend-heading {
     font-size: 1.75rem;
+  }
+
+  .ProductInformation {
+    padding-top: 4rem;
+    padding-bottom: 5.5rem;
+  }
+
+  .product-information-card {
+    padding: 3rem 2.5rem 2rem;
+  }
+
+  .product-information-heading {
+    font-size: 1.875rem;
+    letter-spacing: 0.34em;
+  }
+
+  .product-information-row {
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    gap: 0.85rem 1.75rem;
+    padding: 1.1rem 0;
+  }
+
+  .product-information-label,
+  .product-information-value {
+    font-size: 0.875rem;
   }
 }
 
@@ -2051,7 +2549,7 @@ svg {
     position: sticky;
     top: 4rem;
     border-top: none;
-    padding: 2.5rem 2.5rem 4rem 2rem;
+    padding: 2.5rem 0 4rem 2rem;
     min-height: calc(100vh - 4rem);
   }
 
@@ -2229,12 +2727,16 @@ svg {
   margin: 1.8rem 0 0;
 }
 
+.banner-hero-media picture {
+  display: contents;
+}
+
 .banner-hero-photo {
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  object-position: right center;
+  object-position: center;
   background-color: var(--color-well);
 }
 
@@ -2295,7 +2797,7 @@ svg {
 .banner-highlights {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 1rem;
+  gap: 0.4rem 0.35rem;
   margin-top: 1.2rem;
 }
 
@@ -2307,8 +2809,7 @@ svg {
 }
 
 .banner-highlight:not(:last-child)::after {
-  content: "·";
-  margin-left: 1.25rem;
+  content: ",";
   color: var(--color-muted);
 }
 
@@ -2322,13 +2823,21 @@ svg {
 }
 
 .banner-free-item {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  column-gap: 0.75rem;
   padding: 1.1rem 0;
   border-bottom: 1px solid var(--color-hairline);
 }
 
+.banner-free-item .free-icon {
+  grid-column: 1;
+  grid-row: 1;
+  margin-top: 0.12rem;
+}
+
 .banner-free-title {
+  grid-column: 2;
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -2336,6 +2845,7 @@ svg {
 }
 
 .banner-free-copy {
+  grid-column: 2;
   margin-top: 0.4rem;
   font-size: 0.9375rem;
   line-height: 1.7;
@@ -2397,10 +2907,11 @@ svg {
 }
 
 .banner-stat-value {
-  font-family: var(--font-display);
+  font-family: var(--font-pretendard);
   font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-brand);
 }
 
@@ -2494,7 +3005,6 @@ svg {
   max-width: 40rem;
   font-size: 0.875rem;
   line-height: 1.7;
-  overflow-wrap: break-word;
   color: var(--color-muted);
 }
 
@@ -2560,6 +3070,39 @@ svg {
   .banner-block,
   .product-page-banner-summary {
     padding: 3.8rem 2.2rem;
+  }
+
+  /*
+    PC PDP: the free-from list becomes icon tiles, like the brand 6無 cards.
+    Mobile stays a stacked list so long Korean copy remains easy to read.
+  */
+  .banner-free-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    max-width: none;
+    border-top: none;
+  }
+
+  .banner-free-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding: 1.35rem 1.15rem 1.45rem;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-hairline);
+  }
+
+  .banner-free-item .free-icon {
+    margin-top: 0;
+  }
+
+  .banner-free-title {
+    margin-top: 0.75rem;
+  }
+
+  .banner-free-copy {
+    margin-top: 0.4rem;
   }
 }
 
@@ -2874,6 +3417,58 @@ svg {
     position: sticky;
     top: 5.5rem;
   }
+}
+
+/* ---------- Wishlist page ---------- */
+
+.WishlistPage {
+  min-height: 50vh;
+  padding-top: 2.5rem;
+  padding-bottom: 4rem;
+}
+
+.wishlist-page-wrapper {
+  max-width: var(--page-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wishlist-page-heading {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.wishlist-page-count,
+.wishlist-page-loading {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+.wishlist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 3rem 0;
+}
+
+.wishlist-empty-copy {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+.wishlist-empty-cta {
+  padding: 0.85rem 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.WishlistPage .grid-content {
+  margin-top: 2rem;
 }
 
 /* ---------- Login page ---------- */

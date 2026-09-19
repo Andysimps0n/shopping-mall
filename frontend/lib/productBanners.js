@@ -14,6 +14,9 @@
 //   scalp-deep-cleanser      — no clear PDF chapter
 //   snow flower mask         — not in the catalog
 //
+// Banner photos (`images`) come from Desktop/엔클로이 자료 product folders.
+// Prefer lifestyle / studio / pack shots that are not the catalog thumbnail.
+//
 // UI product names always come from lib/products.js. Banner copy is taken
 // from PDF claims and tightened. Do not invent medical guarantees or
 // survey numbers that the source did not include.
@@ -30,6 +33,7 @@
  * @property {string} copy
  *
  * @typedef {object} BannerFreeItem
+ * @property {string} [id]   아이콘 키 (oil, preservative, …)
  * @property {string} title  예: 무오일
  * @property {string} copy
  *
@@ -51,6 +55,7 @@
  * @property {string} kicker
  * @property {string} heading
  * @property {string} intro
+ * @property {string[]} [images]  카탈로그 썸네일과 다른 에디토리얼 사진. 스토리 사이에 순서대로 들어갑니다.
  * @property {string} [pillarsHeading]
  * @property {BannerPillar[]} [pillars]
  * @property {string} [symptomsHeading]
@@ -86,26 +91,32 @@
 // a face pack should not talk about shampoo surfactants.
 const SIX_FREE_ITEMS = [
   {
+    id: "oil",
     title: "무오일",
     copy: "모공을 막을 수 있는 오일은 넣지 않았습니다.",
   },
   {
+    id: "preservative",
     title: "무방부제",
     copy: "방부제를 넣지 않았습니다.",
   },
   {
+    id: "fragrance",
     title: "무향료",
     copy: "합성 향료를 넣지 않았습니다.",
   },
   {
+    id: "alcohol",
     title: "무알코올",
     copy: "피부를 건조하게 할 수 있는 알코올을 배제했습니다.",
   },
   {
+    id: "color",
     title: "무색소",
     copy: "합성 색소를 넣지 않았습니다.",
   },
   {
+    id: "surfactant",
     title: "무합성계면활성제",
     copy: "강한 합성 계면활성제 없이 처방했습니다.",
   },
@@ -121,10 +132,15 @@ const bannersByProductId = {
     heading: "두피를 자극 없이 비우고, 모발이 설 자리를 만들다",
     intro:
       "아미노산계 세정 성분으로 두피 자극을 덜면서 기름때를 씻어냅니다. 아미노산과 당, 다당류가 턴오버를 돕고 세정력을 보완해, 모발이 자라기 좋은 두피 환경을 만듭니다.",
+    images: [
+      "/products/shampoo/flat.jpg",
+      "/products/shampoo/lifestyle.jpg",
+      "/products/shampoo/studio.jpg",
+    ],
     pillarsHeading: "네 가지 케어",
     pillars: [
       {
-        title: "두피 진정 · 보호",
+        title: "두피 진정과 보호",
         copy: "예민해진 두피를 달래며, 매일 세정에도 부담이 적습니다.",
       },
       {
@@ -158,26 +174,32 @@ const bannersByProductId = {
     freeHighlights: ["6無", "화학성분 0%", "천연 지향"],
     freeItems: [
       {
+        id: "oil",
         title: "무오일",
         copy: "모공 막힘을 부를 수 있는 오일은 넣지 않았습니다.",
       },
       {
+        id: "preservative",
         title: "무방부제",
         copy: "생체 활성을 떨어뜨릴 수 있는 방부제를 배제했습니다.",
       },
       {
+        id: "fragrance",
         title: "무향료",
         copy: "합성 향료를 넣지 않아 두피와 바디 부담을 덜었습니다.",
       },
       {
+        id: "alcohol",
         title: "무알코올",
         copy: "피부를 자극하고 수분을 날릴 수 있는 알코올을 배제했습니다.",
       },
       {
+        id: "color",
         title: "무색소",
-        copy: "모발 손상·알레르기를 유발할 수 있는 합성 색소를 넣지 않았습니다.",
+        copy: "모발 손상과 알레르기를 유발할 수 있는 합성 색소를 넣지 않았습니다.",
       },
       {
+        id: "surfactant",
         title: "무합성계면활성제",
         copy: "SLS 대신 아미노산계 세정 성분을 사용합니다.",
       },
@@ -212,7 +234,7 @@ const bannersByProductId = {
     statsHeading: "사용 후 피부 변화와 제품 만족도",
     statsLead:
       "세 달간의 사용 설문에서, 두피 컨디션과 만족도를 이렇게 답했습니다.",
-    statsCaption: "20–59세 여성·남성, 3개월 사용 후 설문. 개인차가 있을 수 있습니다.",
+    statsCaption: "20–59세 여성과 남성, 3개월 사용 후 설문. 개인차가 있을 수 있습니다.",
     stats: [
       { value: "96%", label: "두피 각질이 줄어들었다" },
       { value: "95%", label: "두피 가려움이 개선되었다" },
@@ -223,7 +245,7 @@ const bannersByProductId = {
     ],
     howHeading: "사용 방법",
     howNote:
-      "유분·화학 성분이 많으면 거품이 잘 나지 않습니다. 물로 노폐물을 씻은 뒤 샴푸하세요.",
+      "유분과 화학 성분이 많으면 거품이 잘 나지 않습니다. 물로 노폐물을 씻은 뒤 샴푸하세요.",
     howSteps: [
       "미온수로 머리를 적신 뒤, 샴푸를 두피와 모발에 바르고 지문 면으로 부드럽게 마사지합니다.",
       "엄지와 검지로 두피를 감싸 정수리 쪽으로 짜 올라갑니다. (1–2분)",
@@ -246,7 +268,11 @@ const bannersByProductId = {
     kicker: "헤어 & 두피 미스트",
     heading: "건강한 헤어 미스트로, 보석처럼 빛나는 머리결",
     intro:
-      "올내추럴 처방으로 모든 모발 타입에 윤기와 힘을 더합니다. 큐티클을 부드럽게 열어 저분자 수분이 손상된 결에 닿도록 돕고, 무화학·논오일·논실리콘으로 매일 뿌리기 부담이 적습니다.",
+      "올내추럴 처방으로 모든 모발 타입에 윤기와 힘을 더합니다. 큐티클을 부드럽게 열어 저분자 수분이 손상된 결에 닿도록 돕고, 무화학, 논오일, 논실리콘으로 매일 뿌리기 부담이 적습니다.",
+    images: [
+      "/products/mist/lifestyle.jpg",
+      "/products/mist/studio.jpg",
+    ],
     pillarsHeading: "네 가지 케어",
     pillars: [
       {
@@ -281,14 +307,17 @@ const bannersByProductId = {
     freeHighlights: ["무화학", "논오일", "논실리콘"],
     freeItems: [
       {
+        id: "chemical",
         title: "무화학",
         copy: "불필요한 합성 성분을 넣지 않았습니다.",
       },
       {
+        id: "oil",
         title: "논오일",
         copy: "오일 막을 씌우지 않아, 뿌린 뒤에도 결이 무겁지 않습니다.",
       },
       {
+        id: "silicon",
         title: "논실리콘",
         copy: "실리콘 코팅 없이, 수분으로 윤기를 돕습니다.",
       },
@@ -318,7 +347,7 @@ const bannersByProductId = {
     howSteps: [
       "모발에서 20cm 정도 떨어뜨려, 중간부터 끝까지 고르게 분사합니다.",
       "손끝이나 브러시로 결을 따라 빗질해 전체에 퍼지게 합니다.",
-      "스타일링 전·후에도 가볍게 뿌려 윤기를 더할 수 있습니다.",
+      "스타일링 전과 후에도 가볍게 뿌려 윤기를 더할 수 있습니다.",
     ],
     cautionHeading: "주의 사항",
     cautions: [
@@ -327,7 +356,7 @@ const bannersByProductId = {
     ],
     ingredientsHeading: "성분 요약",
     ingredients:
-      "무화학·논오일·논실리콘 헤어 미스트입니다. 자세한 전성분은 제품 라벨을 확인해 주세요.",
+      "무화학, 논오일, 논실리콘 헤어 미스트입니다. 자세한 전성분은 제품 라벨을 확인해 주세요.",
   },
 
   "scalp-balance-tonic": {
@@ -335,6 +364,11 @@ const bannersByProductId = {
     heading: "맑고 투명한 피부는 수분으로 지워요",
     intro:
       "보습과 다당체 거품으로 세안과 바디, 아이까지 함께 쓰는 클렌저입니다. 모공 주변 노폐물을 거품이 감싸 씻어내고, 지문이 피부에 직접 닿지 않게 롤링합니다.",
+    images: [
+      "/products/bubblewash/lifestyle-c.jpg",
+      "/products/bubblewash/lifestyle-b.jpg",
+      "/products/bubblewash/studio.jpg",
+    ],
     pillarsHeading: "네 가지 세정",
     pillars: [
       {
@@ -374,7 +408,7 @@ const bannersByProductId = {
       {
         index: "02",
         title: "다당체 거품으로 모공",
-        copy: "거품이 모공 주변 노폐물·피지를 감싸 씻어냅니다. 짜거나 박피하는 세안이 아닙니다.",
+        copy: "거품이 모공 주변 노폐물과 피지를 감싸 씻어냅니다. 짜거나 박피하는 세안이 아닙니다.",
       },
       {
         index: "03",
@@ -396,7 +430,7 @@ const bannersByProductId = {
         ],
       },
       {
-        title: "메이크업을 했을 때 · 더블 세안",
+        title: "메이크업을 했을 때, 더블 세안",
         note: "한 번에 지우기보다, 두 번으로 나눠 감싸 씻습니다.",
         steps: [
           "첫 번째 거품으로 메이크업을 감싸 씻어내고, 미온수로 헹굽니다.",
@@ -421,6 +455,11 @@ const bannersByProductId = {
     heading: "오일 NO, 수분 OK",
     intro:
       "오일과 알코올은 순간적으로 부드러워 보여도 피부를 건조하게 만들 수 있습니다. 무오일 보습으로 각질층에 수분을 남기고, 식물 미네랄 항산화와 당 성분의 수분 흡착으로 촉촉함을 이어 갑니다.",
+    images: [
+      "/products/lotion/lifestyle.jpg",
+      "/products/lotion/flat.jpg",
+      "/products/lotion/pack.jpg",
+    ],
     pillarsHeading: "네 가지 보습",
     pillars: [
       {
@@ -498,6 +537,11 @@ const bannersByProductId = {
     heading: "악순환을 멈추고, 턴오버가 제자리를 찾도록",
     intro:
       "아미노산과 당, 다당류로 각질층 수분 균형을 돕습니다. 삼투압 케어로 모공 주변 노폐물 배출을 돕고, 흐트러진 턴오버 리듬이 제자리를 찾도록 설계했습니다.",
+    images: [
+      "/products/scalppack/lifestyle.jpg",
+      "/products/scalppack/stand.jpg",
+      "/products/scalppack/set.jpg",
+    ],
     pillarsHeading: "네 가지 구성",
     pillars: [
       {
@@ -513,7 +557,7 @@ const bannersByProductId = {
         copy: "다당류가 수분을 붙잡고, 팩이 두피에 고르게 머물게 합니다.",
       },
       {
-        title: "삼투압 · 각질층",
+        title: "삼투압과 각질층",
         copy: "성분을 억지로 밀어 넣기보다, 삼투압으로 각질층 안팎의 균형을 돕습니다.",
       },
     ],
@@ -524,7 +568,7 @@ const bannersByProductId = {
       "두피 모공이 막히고 답답하다",
       "각질이 일어나며 컨디션이 널뛴다",
       "샴푸만으로는 두피가 개운해지지 않는다",
-      "오일·화학 잔여가 두피에 남는 느낌이다",
+      "오일과 화학 잔여가 두피에 남는 느낌이다",
     ],
     freeHeading: "화학 성분을 비우고, 여섯 가지를 뺐습니다",
     freeLead:
@@ -536,7 +580,7 @@ const bannersByProductId = {
     points: [
       {
         index: "01",
-        title: "오일 · 화학 NO",
+        title: "오일과 화학 NO",
         copy: "오일 막과 불필요한 화학 잔여 없이, 두피가 숨 쉴 자리를 남깁니다.",
       },
       {
@@ -586,6 +630,11 @@ const bannersByProductId = {
     heading: "침투보다 순환. 피부를 비워 다시 채우다",
     intro:
       "성분을 억지로 밀어 넣기보다, 삼투압으로 노폐물 배출과 순환을 돕는 팩입니다. 아미노산과 당, 식물 미네랄, 다당체가 각질층의 보습과 항산화, 턴오버 케어를 함께 합니다.",
+    images: [
+      "/products/facepack/lifestyle.jpg",
+      "/products/facepack/flat.jpg",
+      "/products/facepack/display.jpg",
+    ],
     pillarsHeading: "네 가지 케어",
     pillars: [
       {
@@ -624,7 +673,7 @@ const bannersByProductId = {
     points: [
       {
         index: "01",
-        title: "아미노산 · 당",
+        title: "아미노산과 당",
         copy: "피부와 가까운 아미노산과, 수분을 끌어당기는 당 성분이 각질층 컨디션을 보탭니다.",
       },
       {
@@ -639,7 +688,7 @@ const bannersByProductId = {
       },
       {
         index: "04",
-        title: "턴오버 · 각질층",
+        title: "턴오버와 각질층",
         copy: "대략 한 달 주기의 턴오버가 흔들리지 않도록, 각질층 보습 균형을 돕습니다.",
       },
     ],

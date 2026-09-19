@@ -14,7 +14,7 @@ export default function BrandIntro() {
 
           <p className="intro-copy">
             AnnChloe는 살롱의 손길에서 시작된 퍼펙트 천연 브랜드입니다.
-            오일 · 방부제 · 합성 계면활성제를 빼는 6無 처방으로, 헤어 · 두피 ·
+            오일, 방부제, 합성 계면활성제를 빼는 <br></br>6無 처방으로, 헤어, 두피,
             피부의 순환 리듬을 지키는 제품을 선보입니다.
           </p>
 

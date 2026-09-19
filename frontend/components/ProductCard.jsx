@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
 import StarRating from "./StarRating";
+import { useWishlist } from "./WishlistProvider";
 import { formatPrice, getProductPhotoSrc } from "@/lib/products";
 import { getReviewSummary } from "@/lib/reviews";
 
 // A thin-line heart used for the wishlist toggle. Fills with the brand color
-// when active. This is UI only — nothing is persisted.
+// when the product is saved. The saved list lives in WishlistProvider.
 function HeartIcon({ filled }) {
   return (
     <svg
@@ -32,15 +32,16 @@ function HeartIcon({ filled }) {
  * The whole card is a link to `/products/[id]`. The wishlist heart sits
  * *outside* that link so clicking it does not navigate away.
  *
- * Below the photo we keep a short catalog block (name, stars + count, price)
- * so the row matches a typical storefront grid.
+ * Below the photo we keep a short catalog block (name, stars + count, price,
+ * and a "자세히 보기" cue on the full grid so the card reads as clickable).
  *
  * @param {object} props
  * @param {object} props.product
  * @param {boolean} [props.compact] Tighter type for the recommendation row.
  */
 export default function ProductCard({ product, compact = false }) {
-  const [wishlisted, setWishlisted] = useState(false);
+  const { hasHydrated, isWishlisted, toggle } = useWishlist();
+  const wishlisted = hasHydrated && isWishlisted(product.id);
   const { count, average, roundedAverage } = getReviewSummary(product.id);
 
   return (
@@ -55,7 +56,6 @@ export default function ProductCard({ product, compact = false }) {
             // Only pass a photo when the file exists. Other products
             // still fall back to the gray "AC" placeholder.
             src={getProductPhotoSrc(product)}
-            zoom={product.imageZoom}
           />
         </div>
 
@@ -75,13 +75,30 @@ export default function ProductCard({ product, compact = false }) {
             ) : null}
           </p>
           <p className="product-card-price">{formatPrice(product.price)}</p>
+          {!compact ? (
+            <span className="product-card-cta">
+              자세히 보기
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="product-card-cta-icon"
+                aria-hidden="true"
+              >
+                <path d="M5.5 3.5 11 8l-5.5 4.5" />
+              </svg>
+            </span>
+          ) : null}
         </div>
       </Link>
 
       <button
         type="button"
-        onClick={() => setWishlisted((prev) => !prev)}
-        aria-label={wishlisted ? "위시리스트에서 제거" : "위시리스트에 추가"}
+        onClick={() => toggle(product.id)}
+        aria-label={wishlisted ? "찜한 상품에서 제거" : "찜한 상품에 추가"}
         aria-pressed={wishlisted}
         className={
           wishlisted

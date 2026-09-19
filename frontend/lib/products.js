@@ -16,7 +16,6 @@
  * @property {string} categoryLabel 화면에 표시되는 한글 카테고리
  * @property {string} [image] 컬렉션·상세용 정사각에 가까운 제품컷
  * @property {string} [heroImage] 히어로 캐러셀용 와이드 컷 (/public/carousel)
- * @property {number} [imageZoom] 그리드 카드에서만 사진을 확대 (여백 많은 컷용)
  * @property {string} story 제품 상세 페이지용 긴 설명
  */
 
@@ -104,8 +103,6 @@ export const products = [
     categoryLabel: CATEGORY_LABELS.scalp,
     image: "/products/scalppack.jpg",
     heroImage: "/carousel/scalppack_wide.jpg",
-    // Small vial with lots of studio whitespace — zoom so it matches other cards.
-    imageZoom: 1.5,
     story:
       "수분 장벽을 채우며 민감해진 피부결을 정돈하는 토너입니다. 자극 없이 촉촉함을 올려 다음 단계 케어가 부드럽게 이어지도록 돕습니다.",
   },
@@ -119,7 +116,6 @@ export const products = [
     categoryLabel: CATEGORY_LABELS.skin,
     image: "/products/facepack.jpg",
     heroImage: "/carousel/facepack_wide.jpg",
-    imageZoom: 1.85,
     story:
       "매일 한 방울로 속부터 맑은 광채를 끌어올리는 세럼입니다. 가벼운 텍스처가 빠르게 스며들어, 생기 있는 피부 톤을 차분하게 완성합니다.",
   },
@@ -205,7 +201,7 @@ export const COLLECTION_SECTIONS = [
   {
     id: "skin-care",
     title: "피부 케어",
-    copy: "촉촉하고 맑은 피부결을 위한 페이스·바디 케어",
+    copy: "촉촉하고 맑은 피부결을 위한 페이스와 바디 케어",
     categories: ["skin"],
   },
 ];

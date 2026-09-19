@@ -7,6 +7,7 @@ import { formatPrice, getHeroPhotoSrc } from "@/lib/products";
 
 // Keep this in sync with the CSS transition duration on .hero-track.
 const SLIDE_MS = 550;
+const AUTO_PLAY = false;
 const AUTO_PLAY_MS = 6000;
 
 function wrapIndex(index, total) {
@@ -208,7 +209,7 @@ export default function HeroCarousel({ products }) {
   }, [snapToRealSlideIfNeeded, trackIndex]);
 
   useEffect(() => {
-    if (!canLoop || isPageHidden) {
+    if (!AUTO_PLAY || !canLoop || isPageHidden) {
       return undefined;
     }
 
@@ -229,6 +230,7 @@ export default function HeroCarousel({ products }) {
 
   return (
     <section
+      id="hero"
       className="HeroCarousel"
       aria-roledescription="carousel"
       aria-label="주요 제품"
@@ -247,7 +249,7 @@ export default function HeroCarousel({ products }) {
           {slides.map(({ product, slideKey }, index) => (
             <div
               key={slideKey}
-              className="hero-slide"
+              className={`hero-slide hero-slide--${product.id}`}
               aria-hidden={index !== trackIndex}
             >
               <ProductImage

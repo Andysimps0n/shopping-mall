@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import StorePicture from "./StorePicture";
 
 /**
  * Long-form product story that sits under the gallery image.
@@ -12,15 +13,27 @@ import { useId, useState } from "react";
  * ProductDetail looks the content up by product id. Each product can include
  * only the sections it has copy for — missing arrays are skipped.
  *
+ * Photos come from `banner.images` (lifestyle / studio cuts from the
+ * product source files). The catalog thumbnail is only a fallback when
+ * a banner has no extra photos yet.
+ *
  * @param {object} props
  * @param {object} props.product
  * @param {import("@/lib/productBanners").ProductBanner} props.banner
- * @param {string} [props.imageSrc] Real photo path, if one exists in /public.
+ * @param {string} [props.imageSrc] Catalog thumbnail, used only if banner.images is empty.
  */
 export default function ProductDetailBanner({ product, banner, imageSrc }) {
   // Collapsed by default so "고객 리뷰" is closer when you land on the page.
   const [expanded, setExpanded] = useState(false);
   const bodyId = useId();
+
+  // Prefer the editorial set. Fall back to the catalog shot so older
+  // banners without `images` still show a photo.
+  const photos = hasItems(banner.images)
+    ? banner.images
+    : imageSrc
+      ? [imageSrc]
+      : [];
 
   const hasPillars = hasItems(banner.pillars);
   const hasSymptoms = hasItems(banner.symptoms);
@@ -78,17 +91,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
         className="banner-fold-body"
         hidden={!expanded}
       >
-        {imageSrc ? (
-          <section className="banner-block banner-hero-media-block" aria-hidden="true">
-            <figure className="banner-hero-media">
-              <img
-                src={imageSrc}
-                alt=""
-                className="banner-hero-photo"
-              />
-            </figure>
-          </section>
-        ) : null}
+        {photos[0] ? <BannerPhoto src={photos[0]} /> : null}
 
         {hasPillars ? (
           <section
@@ -111,6 +114,8 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             </ul>
           </section>
         ) : null}
+
+        {photos[1] ? <BannerPhoto src={photos[1]} /> : null}
 
         {hasSymptoms ? (
           <section
@@ -197,6 +202,8 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             </ol>
           </section>
         ) : null}
+
+        {photos[2] ? <BannerPhoto src={photos[2]} /> : null}
 
         {hasScience ? (
           <section
@@ -344,6 +351,10 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
           </section>
         ) : null}
 
+        {photos.slice(3).map((src) => (
+          <BannerPhoto key={src} src={src} />
+        ))}
+
         <div className="banner-fold-footer">
           <button
             type="button"
@@ -358,6 +369,21 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
         </div>
       </div>
     </article>
+  );
+}
+
+function BannerPhoto({ src }) {
+  return (
+    <section className="banner-block banner-hero-media-block" aria-hidden="true">
+      <figure className="banner-hero-media">
+        <StorePicture
+          src={src}
+          alt=""
+          className="banner-hero-photo"
+          loading="lazy"
+        />
+      </figure>
+    </section>
   );
 }
 

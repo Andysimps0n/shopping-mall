@@ -1,31 +1,16 @@
-import { Suspense } from "react";
 import HeroCarousel from "@/components/HeroCarousel";
 import ProductGrid from "@/components/ProductGrid";
 import BrandIntro from "@/components/BrandIntro";
-import HomeSkeleton from "@/components/HomeSkeleton";
-import { getProducts, getCollectionSections } from "@/lib/catalog";
+import { products, getCollectionSections } from "@/lib/products";
 
-export const revalidate = 60;
-
-async function HomeCatalog() {
-  const products = await getProducts();
-  const sections = await getCollectionSections();
+export default function Home() {
+  const sections = getCollectionSections();
 
   return (
-    <>
+    <main className="Home">
       <HeroCarousel products={products} />
       <BrandIntro />
       <ProductGrid sections={sections} />
-    </>
-  );
-}
-
-export default function Home() {
-  return (
-    <main className="Home">
-      <Suspense fallback={<HomeSkeleton />}>
-        <HomeCatalog />
-      </Suspense>
     </main>
   );
 }

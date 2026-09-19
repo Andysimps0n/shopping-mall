@@ -40,8 +40,7 @@ export default function ProductReviews({ reviews }) {
                       label={`${review.rating}점`}
                     />
                     <p className="review-card-meta">
-                      <span className="review-card-author">{review.author}</span>
-                      <span aria-hidden="true"> · </span>
+                      <span className="review-card-author">{review.author}</span>,{" "}
                       <time dateTime={review.date.replaceAll(".", "-")}>
                         {review.date}
                       </time>

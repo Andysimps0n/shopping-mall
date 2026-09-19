@@ -28,7 +28,7 @@ export const loginAccounts = [
   {
     id: "b2b",
     label: "B2B 전용",
-    lead: "살롱 · 도매 파트너 전용 계정입니다.",
+    lead: "살롱과 도매 파트너 전용 계정입니다.",
     emailLabel: "파트너 이메일",
     footnoteBefore: "파트너 가입은",
     footnoteAfter: "으로 문의해 주세요.",

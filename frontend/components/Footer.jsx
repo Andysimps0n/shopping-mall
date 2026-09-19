@@ -7,7 +7,7 @@ export default function Footer() {
           <div className="footer-brand">
             <p className="footer-title">AnnChloe</p>
             <p className="footer-copy">
-              Beauty People · 살롱이 큐레이션한 헤어 · 두피 · 피부 케어
+              Beauty People, 살롱이 큐레이션한 헤어, 두피, 피부 케어
             </p>
           </div>
           <p className="footer-legal">
