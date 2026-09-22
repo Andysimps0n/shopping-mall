@@ -9,24 +9,6 @@ import { useWishlist } from "./WishlistProvider";
 
 // Small, self-contained icon set. Inline SVGs keep the header dependency-free
 // and let us match the quiet, thin-line look the brand wants.
-function BellIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="BellIcon icon"
-      aria-hidden="true"
-    >
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
 function CartIcon() {
   return (
     <svg
@@ -115,14 +97,6 @@ function UserIcon({ filled = false }) {
       <circle cx="12" cy="8" r="3.25" />
       <path d="M5 19.5c1.4-3.2 3.8-4.75 7-4.75s5.6 1.55 7 4.75" />
     </svg>
-  );
-}
-
-function IconButton({ label, children }) {
-  return (
-    <button type="button" aria-label={label} className="IconButton">
-      {children}
-    </button>
   );
 }
 
@@ -343,13 +317,14 @@ export default function Header() {
         </nav>
 
         <div className="header-actions">
-          <IconButton label="알림">
-            <BellIcon />
-          </IconButton>
           <LoginLink />
           <WishlistLink />
           <CartLink />
         </div>
+      </div>
+
+      <div className="header-mobile-bar container">
+        <BrandLogo />
       </div>
 
       <MobileTabBar />

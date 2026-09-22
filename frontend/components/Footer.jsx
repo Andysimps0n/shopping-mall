@@ -1,4 +1,7 @@
-// A quiet closing footer so the page ends intentionally rather than abruptly.
+import { brand } from "@/lib/brand";
+
+// Quiet close. Company lines come from brand.js so the address
+// stays the same as the brand page.
 export default function Footer() {
   return (
     <footer className="Footer">
@@ -6,8 +9,10 @@ export default function Footer() {
         <div className="footer-content">
           <div className="footer-brand">
             <p className="footer-title">AnnChloe</p>
+            <p className="footer-copy">{brand.companyName}</p>
+            <p className="footer-copy">{brand.companyAddress}</p>
             <p className="footer-copy">
-              Beauty People, 살롱이 큐레이션한 헤어, 두피, 피부 케어
+              <a href={brand.companyTelHref}>{brand.companyTelLabel}</a>
             </p>
           </div>
           <p className="footer-legal">

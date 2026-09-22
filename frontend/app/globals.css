@@ -15,12 +15,20 @@
 
   --color-brand: #63298c;
   --color-brand-hover: #511f73;
+  /* Same plum, lightened. For large marks that should read as brand
+     without competing with the black title. */
+  --color-brand-soft: #b489c9;
   --color-ink: #1a1a1a;
-  --color-muted: #6b6b6b;
-  --color-well: #f5f5f5;
-  --color-hairline: #ebebeb;
-  --color-wash: #f9f9f9;
+  --color-muted: #6f6a64;
+  /* Shared cream surface, lifted from #f6f3ee. */
+  --color-well: #faf8f5;
+  --color-hairline: #ebe6df;
+  --color-wash: #faf8f5;
   --color-white: #ffffff;
+  --section-space: clamp(4rem, 8vw, 6rem);
+  --radius-photo: 8px;
+  --control-height: 3rem;
+  --mobile-bar-height: 2.75rem;
   /* Warm off-whites for hero type — less glare than #fff on a photo. */
   --color-cream: #f3eee4;
   --color-cream-soft: #e4d9c8;
@@ -39,6 +47,7 @@
 
   --header-height: 4rem;
   --tabbar-height: 3.5rem;
+  --product-tabs-height: 2.75rem;
 }
 
 @media (min-width: 768px) {
@@ -137,11 +146,17 @@ svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 1.5rem;
+  border: 1px solid transparent;
   border-radius: 9999px;
   background-color: var(--color-brand);
   color: var(--color-white);
+  font-size: 0.9375rem;
   font-weight: 500;
-  transition: background-color 150ms ease;
+  line-height: 1;
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .button:hover {
@@ -149,13 +164,14 @@ svg {
 }
 
 .button--secondary {
-  background-color: transparent;
-  color: var(--color-brand);
-  border: 1px solid var(--color-brand);
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
 }
 
 .button--secondary:hover {
-  background-color: var(--color-well);
+  background-color: var(--color-wash);
+  color: var(--color-ink);
 }
 
 /* ---------- Header ---------- */
@@ -400,7 +416,8 @@ svg {
 }
 
 /* Mobile app tab bar — hidden on desktop, shown under 768px. */
-.header-mobile {
+.header-mobile,
+.header-mobile-bar {
   display: none;
 }
 
@@ -455,27 +472,55 @@ svg {
 
 @media (max-width: 767px) {
   .Header {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: static;
     border-bottom: none;
-    border-top: 1px solid var(--color-hairline);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: transparent;
+    backdrop-filter: none;
   }
 
   .header-wrapper {
     display: none;
   }
 
+  .header-mobile-bar {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    height: var(--mobile-bar-height);
+    align-items: center;
+    border-bottom: 1px solid var(--color-hairline);
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+  }
+
+  .header-mobile-bar .header-logo-title {
+    font-size: 1.35rem;
+  }
+
+  .header-mobile-bar .header-logo-subtitle {
+    font-size: 0.5rem;
+  }
+
   .header-mobile {
     display: flex;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
     height: var(--tabbar-height);
     align-items: stretch;
+    border-top: 1px solid var(--color-hairline);
+    background-color: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   body {
+    padding-top: var(--mobile-bar-height);
     padding-bottom: calc(
       var(--tabbar-height) + env(safe-area-inset-bottom, 0px)
     );
@@ -502,11 +547,14 @@ svg {
 }
 
 @media (max-width: 767px) {
+  /* Photo on top, type on the canvas underneath, so the headline
+     never sits on the bottle. */
   .HeroCarousel {
-    /* No top header on mobile — fill the space above the tab bar. */
-    height: calc(
-      100dvh - var(--tabbar-height) - env(safe-area-inset-bottom, 0px)
-    );
+    height: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-white);
   }
 }
 
@@ -697,28 +745,26 @@ svg {
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.04em;
-  color: #603182;
+  color: var(--color-ink);
 }
 
 .hero-name {
   margin-top: 1rem;
   font-size: 1rem;
   font-weight: 500;
-  color: #8d8493;
+  color: var(--color-muted);
 }
 
 .hero-price {
   margin-top: 0.35rem;
   font-size: 1.125rem;
   font-weight: 500;
-  color: #6d6476;
+  color: var(--color-ink);
 }
 
 .hero-button {
   margin-top: 1.5rem;
-  padding: 0.875rem 2.25rem;
-  font-size: 0.9375rem;
-  box-shadow: 0 10px 24px rgba(99, 41, 140, 0.22);
+  padding: 0 1.75rem;
 }
 
 .hero-arrow {
@@ -733,7 +779,7 @@ svg {
   border-radius: 9999px;
   border: 1px solid rgba(26, 26, 26, 0.08);
   background-color: rgba(255, 255, 255, 0.82);
-  color: #6d6476;
+  color: var(--color-brand);
   backdrop-filter: blur(8px);
   transform: translateY(-50%);
   transition: background-color 150ms ease, color 150ms ease;
@@ -741,7 +787,7 @@ svg {
 
 .hero-arrow:hover {
   background-color: var(--color-white);
-  color: var(--color-brand);
+  color: var(--color-brand-hover);
 }
 
 .hero-arrow--prev {
@@ -767,7 +813,7 @@ svg {
   height: 0.375rem;
   width: 0.375rem;
   border-radius: 9999px;
-  background-color: rgba(26, 26, 26, 0.22);
+  background-color: rgba(99, 41, 140, 0.28);
   transition: width 150ms ease, background-color 150ms ease;
 }
 
@@ -784,7 +830,7 @@ svg {
   /* --- PC (768px and up) --- */
   /* 1. 두피 샴푸 */
   .hero-slide--silk-repair-shampoo {
-    --hero-object-x: 1000%;
+    --hero-object-x: 72%;
     --hero-object-y: 70%;
   }
 
@@ -876,6 +922,37 @@ svg {
   }
 }
 
+@media (max-width: 767px) {
+  /* These come after the base hero rules so they win on phones.
+     Photo on top, type on the canvas underneath. */
+  .hero-slides {
+    position: relative;
+    height: min(52dvh, 26rem);
+    inset: auto;
+  }
+
+  .hero-overlay {
+    display: none;
+  }
+
+  .hero-wrapper {
+    position: relative;
+    inset: auto;
+    justify-content: flex-start;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .hero-arrow {
+    top: calc(min(52dvh, 26rem) / 2);
+  }
+
+  .hero-dots {
+    top: calc(min(52dvh, 26rem) - 1.5rem);
+    bottom: auto;
+  }
+}
+
 /* ---------- Product image placeholder ---------- */
 
 .ProductImage {
@@ -901,7 +978,7 @@ svg {
 }
 
 .ProductImage--detail {
-  width: 60%;
+  width: min(100%, 36rem);
   aspect-ratio: 1 / 1;
 }
 
@@ -964,15 +1041,8 @@ svg {
 .product-card-media {
   position: relative;
   overflow: hidden;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-photo);
   background-color: var(--color-well);
-  /* White studio shots need a visible edge against the white page. */
-  border: 1px solid rgba(26, 26, 26, 0.14);
-  transition: border-color 180ms ease;
-}
-
-.ProductCard:hover .product-card-media {
-  border-color: rgba(26, 26, 26, 0.28);
 }
 
 .product-card-wishlist {
@@ -1099,9 +1169,9 @@ svg {
 
 .grid-heading {
   font-size: 1.875rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: #391850;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
 }
 
 .grid-copy {
@@ -1425,630 +1495,689 @@ svg {
 /* ---------- Brand intro ---------- */
 
 .BrandIntro {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: var(--section-space);
+  padding-bottom: var(--section-space);
   background-color: var(--color-wash);
 }
 
 .intro-wrapper {
-  width: 75%;
-  text-align: center;
-}
-
-.intro-heading {
-  font-family: var(--font-display);
-  font-size: 1.875rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--color-ink);
+  max-width: 40rem;
 }
 
 .intro-copy {
-  margin-top: 1.5rem;
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.85;
-  letter-spacing: 0.01em;
-  color: var(--color-muted);
-}
-
-.intro-button {
-  margin-top: 2.5rem;
-  padding: 0.875rem 2rem;
-  font-size: 0.8125rem;
+  font-size: 1.125rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
-}
-
-@media (min-width: 768px) {
-  .BrandIntro {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
-  }
-
-  .intro-heading {
-    font-size: 2.75rem;
-  }
-
-  .intro-copy {
-    font-size: 1.125rem;
-    line-height: 1.9;
-  }
-}
-
-/* ---------- Brand page ---------- */
-
-.BrandPage {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.brand-hero {
-  padding-top: 3.5rem;
-  padding-bottom: 0;
-}
-
-.brand-section {
-  padding-top: 4.5rem;
-  padding-bottom: 4.5rem;
-}
-
-/*
-  Narrow centered reading column. Do not put .container on this box.
-
-  .container uses --page-inset, which grows with the viewport so a
-  FULL-WIDTH bar stays aligned to the 1200px page column. On a 42rem
-  (~672px) box that same padding is subtracted from both sides, so the
-  text column shrinks as the window gets wider (around 1600px+ the
-  heading starts wrapping almost one word per line).
-*/
-.brand-hero-copy {
-  max-width: 42rem;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: var(--page-gutter);
-  padding-right: var(--page-gutter);
-  text-align: center;
-}
-
-.brand-mineral-wrapper,
-.brand-split-wrapper {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem;
-}
-
-.brand-mineral-content,
-.brand-split-copy {
-  max-width: 40rem;
-}
-
-.brand-section-wrapper > .brand-eyebrow,
-.brand-section-wrapper > .brand-section-heading,
-.brand-section-wrapper > .brand-lead,
-.brand-section-wrapper > .brand-copy {
-  max-width: 40rem;
-}
-
-.brand-eyebrow {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  color: var(--color-muted);
-}
-
-.brand-kicker {
-  margin-top: 0.85rem;
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 600;
+  line-height: 1.7;
   letter-spacing: -0.02em;
-  color: var(--color-brand);
-}
-
-.brand-heading-line {
-  margin-top: 1.1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.45;
-  letter-spacing: -0.02em;
-  color: var(--color-brand);
-}
-
-.brand-heading {
-  margin-top: 0.35rem;
-  font-size: 1.85rem;
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: -0.03em;
   color: var(--color-ink);
 }
 
-.brand-section-heading {
-  margin-top: 0.75rem;
-  font-size: 1.65rem;
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: -0.03em;
-  color: var(--color-ink);
-}
-
-.brand-lead {
+.intro-link {
+  display: inline-block;
   margin-top: 1.25rem;
-  font-size: 1.0625rem;
-  line-height: 1.7;
-  color: var(--color-ink);
-}
-
-.brand-copy {
-  margin-top: 1rem;
-  font-size: 1rem;
-  line-height: 1.7;
-  color: var(--color-muted);
-}
-
-.brand-highlights {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-  margin: 2rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.brand-highlight {
-  min-width: 0;
-  padding: 0.85rem 0.4rem 0.95rem;
-  border: 1px solid var(--color-hairline);
-}
-
-.brand-highlight-value {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--color-brand);
-}
-
-.brand-highlight-label {
-  margin-top: 0.3rem;
-  font-size: 0.7rem;
-  line-height: 1.4;
-  color: var(--color-muted);
-}
-
-.brand-hero-media {
-  margin: 1.75rem 0 0;
-}
-
-.brand-hero-photo {
-  display: block;
-  width: 100%;
-  max-width: 1080px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.brand-photo-frame {
-  margin: 0;
-  background-color: var(--color-well);
-}
-
-.brand-pack-photo {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
-  padding: 1.25rem;
-}
-
-.brand-section--wash {
-  background-color: var(--color-wash);
-}
-
-.brand-pillars,
-.brand-approach-grid,
-.brand-free-grid,
-.brand-for-list,
-.brand-stats,
-.brand-compare {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.brand-pillars,
-.brand-approach-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  margin-top: 2.25rem;
-  border-top: 1px solid var(--color-hairline);
-}
-
-.brand-index-card {
-  padding: 1.35rem 0;
-  border-bottom: 1px solid var(--color-hairline);
-}
-
-.brand-pillar-index {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
   color: var(--color-brand);
 }
 
-.brand-pillar-title {
-  margin-top: 0.4rem;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--color-ink);
+.intro-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
-.brand-pillar-copy {
-  margin-top: 0.45rem;
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  color: var(--color-muted);
-}
+/* ---------- Brand page (editorial redesign) ----------
 
-.brand-free-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-top: 2.25rem;
-  max-width: none;
-}
+  One design system for /brand:
+  - Surfaces: white + warm parchment only.
+  - Purple (--bp-accent) is limited to links, thin rules, small indexes.
+  - No shadows, no gradients, no icons. Dividers are 1px hairlines.
+  - Section spacing is one shared clamp() so the page scrolls in a rhythm.
+  - Photos are not in yet: .bp-media is a neutral placeholder that keeps
+    the exact ratio the real image will use.
+*/
 
-.brand-free-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 1.1rem 0.75rem 1.15rem;
-  background-color: var(--color-white);
-  border: 1px solid var(--color-hairline);
-}
-
-.free-icon,
-.brand-free-icon {
+/* Shared with PDP: FreeIcon sizing (used by banner-free-item). */
+.free-icon {
   width: 1.5rem;
   height: 1.5rem;
   flex-shrink: 0;
   color: var(--color-brand);
 }
 
-.brand-free-title {
-  margin-top: 0.65rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--color-ink);
-}
+.BrandPage {
+  --bp-accent: var(--color-brand);
+  --bp-parchment: #faf8f5;
+  --bp-frame: #2b282c;
+  --bp-section: clamp(4.5rem, 9vw, 8rem);
+  --bp-reading: 40rem;
+  /* Matches .bp-page-nav min-height so anchor jumps clear the bar. */
+  --bp-nav-height: 2.75rem;
 
-/* Mobile: icon + name only. Descriptions return from 640px up. */
-.brand-free-copy {
-  display: none;
-}
-
-.brand-compare {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-top: 1.8rem;
-}
-
-.brand-compare-row {
-  padding: 1.1rem 0 1.15rem;
-  border-top: 1px solid var(--color-hairline);
-}
-
-.brand-compare-row dd {
-  margin: 0;
-}
-
-.brand-compare-label {
-  font-size: 0.8125rem;
-  color: var(--color-muted);
-}
-
-.brand-compare-value {
-  margin-top: 0.35rem;
-  font-family: var(--font-display);
-  font-size: 1.65rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--color-brand);
-}
-
-.brand-compare-note {
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--color-muted);
-}
-
-.brand-footnote {
-  margin-top: 1.1rem;
-  font-size: 0.8125rem;
-  line-height: 1.65;
-  color: var(--color-muted);
-}
-
-.brand-approach-grid {
-  max-width: none;
-}
-
-.brand-quote {
-  padding-top: 4.5rem;
-  padding-bottom: 4.5rem;
-  background-color: var(--color-wash);
-  text-align: center;
-}
-
-.brand-quote-wrapper {
-  max-width: 42rem;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: var(--page-gutter);
-  padding-right: var(--page-gutter);
-}
-
-.brand-quote-text {
-  margin-top: 1.25rem;
-  font-size: 1.2rem;
-  font-weight: 500;
-  line-height: 1.7;
-  letter-spacing: -0.02em;
-  color: var(--color-ink);
-}
-
-.brand-quote-credit {
-  margin-top: 1.25rem;
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-  color: var(--color-muted);
-}
-
-.brand-for-list {
-  margin-top: 1.6rem;
-}
-
-.brand-for-list li {
-  padding: 0.75rem 0 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-hairline);
-  font-size: 0.975rem;
-  line-height: 1.6;
-  color: var(--color-ink);
-  box-shadow: inset 2px 0 0 var(--color-brand);
-}
-
-.brand-for-list li:first-child {
-  border-top: 1px solid var(--color-hairline);
-}
-
-.brand-stats-heading {
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--color-ink);
-}
-
-.brand-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.4rem 1rem;
-  margin-top: 1.5rem;
-}
-
-.brand-stat-value {
   font-family: var(--font-pretendard);
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-brand);
+  background-color: var(--color-white);
+  color: var(--color-ink);
 }
 
-.brand-stat-label {
-  margin-top: 0.35rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
+/* ----- shared primitives ----- */
+
+.bp-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   color: var(--color-muted);
 }
 
-.brand-company {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
-  background-color: var(--color-brand);
-  color: var(--color-cream);
-  text-align: center;
+/* The one allowed accent under an eyebrow: a short purple underline. */
+.bp-eyebrow::after {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 1px;
+  margin-top: 0.7rem;
+  background-color: var(--bp-accent);
 }
 
-.brand-company-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.brand-company-wordmark {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 600;
+.bp-section-heading {
+  margin-top: 1.4rem;
+  font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.25;
   letter-spacing: -0.03em;
+  color: var(--color-ink);
 }
 
-.brand-company-subtitle {
-  margin-top: 0.35rem;
-  font-size: 0.65rem;
-  font-weight: 500;
-  letter-spacing: 0.32em;
-  color: var(--color-cream-soft);
-}
-
-.brand-company-name {
-  margin-top: 1.75rem;
+.bp-copy {
+  margin-top: 1.1rem;
+  max-width: var(--bp-reading);
   font-size: 1rem;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+
+.bp-copy--ink {
+  color: var(--color-ink);
+}
+
+.bp-section {
+  padding-top: var(--bp-section);
+  padding-bottom: var(--bp-section);
+}
+
+.bp-section--parchment {
+  background-color: var(--color-wash);
+}
+
+/* Neutral media placeholder. Keeps the ratio of the future photo. */
+.bp-media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  background-color: var(--bp-parchment);
+  border: 1px solid var(--color-hairline);
+}
+
+.bp-media-label {
+  font-size: 0.75rem;
   font-weight: 500;
-  color: var(--color-cream);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-soft);
 }
 
-.brand-company-address,
-.brand-company-tel {
-  margin-top: 0.55rem;
+.bp-media-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bp-media:has(.bp-media-photo) {
+  border: none;
+  background-color: var(--color-well);
+}
+
+.bp-media--landscape {
+  aspect-ratio: 4 / 3;
+}
+
+.bp-media--portrait {
+  aspect-ratio: 3 / 4;
+}
+
+.bp-media--square {
+  aspect-ratio: 1;
+}
+
+/* Pill CTA — the only place rounded corners are used aggressively. */
+.bp-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.9rem;
+  border-radius: 9999px;
   font-size: 0.9rem;
-  line-height: 1.6;
-  color: var(--color-cream-soft);
+  font-weight: 500;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
-.brand-company-tel {
-  display: inline-block;
+.bp-pill--light {
+  background-color: var(--color-white);
+  color: var(--color-ink);
 }
 
-.brand-company-tel:hover {
+.bp-pill--light:hover {
+  background-color: var(--bp-parchment);
+}
+
+.bp-pill--ink {
+  background-color: var(--color-ink);
   color: var(--color-white);
 }
 
-.brand-company-button {
-  margin-top: 2.25rem;
-  padding: 0.875rem 2rem;
+.bp-pill--ink:hover {
+  background-color: #000000;
+}
+
+/* Text link: purple, underlined on hover only. */
+.bp-text-link {
   font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--bp-accent);
+}
+
+.bp-text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* ----- 1. hero -----
+   The lineup photo is bright, so type sits under the frame
+   instead of on top of the bottles. */
+
+.bp-hero {
+  position: relative;
+  padding-top: 1.25rem;
+}
+
+/* Sticks under the site header for the whole brand page.
+   top matches the header so the two bars stack instead of overlap. */
+.bp-page-nav {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+  min-height: var(--bp-nav-height);
+  margin: 0;
+  padding: 0.35rem var(--page-inset);
+  border-bottom: 1px solid var(--color-hairline);
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 280ms ease;
+}
+
+/* Fold up past the header while scrolling down. The shift is the
+   bar's own height plus the header, so it clears the viewport. */
+.bp-page-nav.is-collapsed {
+  transform: translateY(calc(-100% - var(--header-height)));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-page-nav {
+    transition: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .bp-page-nav {
+    top: var(--mobile-bar-height);
+  }
+}
+
+.BrandPage .bp-section {
+  scroll-margin-top: calc(var(--header-height) + var(--bp-nav-height));
+}
+
+@media (max-width: 767px) {
+  .BrandPage .bp-section {
+    scroll-margin-top: calc(var(--mobile-bar-height) + var(--bp-nav-height));
+  }
+}
+
+.bp-page-nav a {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  transition: color 150ms ease;
+}
+
+.bp-page-nav a:hover {
+  color: var(--color-ink);
+}
+
+.bp-hero-frame {
+  position: relative;
+  /* Matches lineup-hero.jpg (1024×432) so the full row of bottles stays in frame. */
+  aspect-ratio: 1024 / 432;
+  overflow: hidden;
   background-color: var(--color-white);
-  color: var(--color-brand);
 }
 
-.brand-company-button:hover {
-  background-color: var(--color-cream);
-  color: var(--color-brand-hover);
+.bp-hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
 }
 
-@media (min-width: 640px) {
-  .brand-highlight-value {
-    font-size: 1.35rem;
-  }
+.bp-hero-copy {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
 
-  .brand-highlight-label {
-    font-size: 0.75rem;
-  }
+.bp-hero-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--color-muted);
+}
 
-  .brand-free-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
+.bp-hero-eyebrow::after {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 1px;
+  margin-top: 0.6rem;
+  background-color: var(--color-brand);
+}
 
-  .brand-free-card {
-    align-items: flex-start;
-    text-align: left;
-    padding: 1.4rem 1.2rem 1.5rem;
-  }
+.bp-hero-title {
+  margin-top: 0.9rem;
+  white-space: pre-line;
+  font-size: clamp(1.75rem, 4vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+}
 
-  .brand-free-title {
-    margin-top: 0.85rem;
-    font-size: 1.05rem;
-  }
+.bp-hero-aside {
+  max-width: 26rem;
+}
 
-  .brand-free-copy {
-    display: block;
-    margin-top: 0.45rem;
-    font-size: 0.9375rem;
-    line-height: 1.7;
-    color: var(--color-muted);
-  }
+.bp-hero-desc {
+  white-space: pre-line;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
 
-  .brand-approach-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0 2rem;
-  }
-
-  .brand-approach-grid .brand-index-card:nth-child(odd) {
-    padding-right: 0.5rem;
-  }
-
-  .brand-compare {
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem 2rem;
-  }
+.bp-hero-aside .bp-pill,
+.bp-hero-aside .button {
+  margin-top: 1.25rem;
 }
 
 @media (min-width: 768px) {
-  .brand-hero {
-    padding-top: 5.5rem;
-  }
-
-  .brand-section,
-  .brand-quote {
-    padding-top: 6.5rem;
-    padding-bottom: 6.5rem;
-  }
-
-  .brand-hero-media {
-    margin-top: 3rem;
-  }
-
-  .brand-heading-line {
-    font-size: 1.45rem;
-  }
-
-  .brand-heading {
-    font-size: 2.6rem;
-  }
-
-  .brand-section-heading {
-    font-size: 2rem;
-  }
-
-  .brand-lead {
-    font-size: 1.125rem;
-  }
-
-  .brand-quote-text {
-    font-size: 1.45rem;
-  }
-
-  .brand-mineral-wrapper,
-  .brand-split-wrapper {
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    align-items: start;
-    max-width: none;
-  }
-
-  .brand-mineral-content,
-  .brand-split-copy {
-    max-width: none;
-  }
-
-  .brand-pack-photo {
-    padding: 1.5rem;
-  }
-
-  .brand-free-grid {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-
-  .brand-pillars {
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 0 1.75rem;
-  }
-
-  .brand-index-card {
-    padding-top: 1.5rem;
-  }
-
-  .brand-company {
-    padding-top: 6.5rem;
-    padding-bottom: 6.5rem;
-  }
-
-  .brand-company-wordmark {
-    font-size: 2.4rem;
+  .bp-hero-copy {
+    grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 0.8fr);
+    gap: 3rem;
+    align-items: end;
   }
 }
 
+.bp-free-line {
+  margin: 1.5rem 0 0;
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+
+/* ----- 2. brand statement ----- */
+
+.bp-statement-wrapper {
+  max-width: 56rem;
+}
+
+.bp-statement {
+  margin-top: 1.6rem;
+  font-size: clamp(1.45rem, 2.8vw, 2.35rem);
+  font-weight: 600;
+  line-height: 1.42;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+}
+
+/* ----- 3. salon origin (asymmetric 7:5) ----- */
+
+.bp-origin-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+}
+
+@media (min-width: 900px) {
+  .bp-origin-grid {
+    grid-template-columns: 7fr 5fr;
+    gap: clamp(3rem, 6vw, 5.5rem);
+    align-items: center;
+  }
+}
+
+/* ----- 4. observation archive (document list) ----- */
+
+.bp-archive-list {
+  margin: 2.5rem 0 0;
+  padding: 0;
+  max-width: 46rem;
+  list-style: none;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.bp-archive-item {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  column-gap: 1.25rem;
+  padding: 1.5rem 0 1.6rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.bp-archive-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-accent);
+}
+
+.bp-archive-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.bp-archive-copy {
+  margin-top: 0.45rem;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--color-muted);
+}
+
+/* ----- 5. product principles (record table) ----- */
+
+.bp-principles-table {
+  margin: 2.5rem 0 0;
+  max-width: 52rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.bp-principles-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  padding: 1.5rem 0 1.6rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+@media (min-width: 700px) {
+  .bp-principles-row {
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: 2rem;
+  }
+}
+
+.bp-principles-row dt {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+.bp-principles-row dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--color-muted);
+}
+
+/* ----- 6. ritual (portrait media + big step numbers) ----- */
+
+.bp-ritual-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+}
+
+@media (min-width: 900px) {
+  .bp-ritual-grid {
+    grid-template-columns: 5fr 7fr;
+    gap: clamp(3rem, 6vw, 5.5rem);
+    align-items: start;
+  }
+}
+
+.bp-ritual-steps {
+  margin: 2.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bp-ritual-step {
+  padding: 1.4rem 0 1.5rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+/* Number and copy sit on one row, centered against each other.
+   The number is much taller than one line of text, so baseline
+   alignment pushed it up onto the title only. */
+.bp-ritual-step-body {
+  display: flex;
+  align-items: center;
+  column-gap: 1.5rem;
+}
+
+.bp-ritual-step:first-child {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.bp-ritual-number {
+  flex-shrink: 0;
+  font-size: clamp(2.2rem, 3.5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-brand-soft);
+}
+
+.bp-ritual-step-body > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.bp-ritual-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.bp-ritual-copy {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+/* ----- 7. product family ----- */
+
+.bp-family-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem 1.5rem;
+  margin: 2.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .bp-family-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .bp-family-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.bp-family-link {
+  display: block;
+  color: inherit;
+  cursor: pointer;
+}
+
+.bp-family-link:hover .bp-text-link {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.bp-family-name {
+  margin-top: 1rem;
+  font-size: 0.9875rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.bp-family-role {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+.bp-family-item .bp-text-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+}
+
+/* ----- 8. transparency + closing ----- */
+
+.bp-transparency-table {
+  margin: 2.5rem 0 0;
+  max-width: 52rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.bp-closing {
+  margin-top: clamp(3.5rem, 7vw, 6rem);
+  padding-top: clamp(3rem, 6vw, 5rem);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.bp-closing-sentence {
+  max-width: 34rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+}
+
+.bp-closing .bp-pill {
+  margin-top: 1.75rem;
+}
+
+.bp-company-line {
+  margin-top: 2.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.bp-company-line a {
+  color: var(--bp-accent);
+}
+
+.bp-company-line a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 /* ---------- Product page ---------- */
+
+.ProductPageTabs {
+  border-top: 1px solid var(--color-hairline);
+  border-bottom: 1px solid var(--color-hairline);
+  background-color: var(--color-white);
+}
+
+.product-page-tabs-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: var(--product-tabs-height);
+}
+
+.product-page-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--product-tabs-height);
+  padding: 0.7rem 0.5rem;
+  border-bottom: 2px solid transparent;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-align: center;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.product-page-tab:hover {
+  color: var(--color-ink);
+}
+
+.product-page-tab.is-active {
+  color: var(--color-ink);
+  font-weight: 600;
+  border-bottom-color: var(--color-brand);
+}
+
+.product-page-tab:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -2px;
+}
+
+#product-information,
+#product-ingredients,
+#product-reviews {
+  scroll-margin-top: calc(var(--header-height) + 0.75rem);
+}
+
+@media (max-width: 767px) {
+  #product-information,
+  #product-ingredients,
+  #product-reviews {
+    scroll-margin-top: 0.75rem;
+  }
+}
 
 /* Same horizontal edges as the header (.container uses --page-inset). */
 .product-page-layout {
@@ -2081,9 +2210,7 @@ svg {
     order: 2;
   }
 
-  .ProductDetailBanner,
-  .product-page-banner,
-  .product-page-banner-fold {
+  .product-page-catalog {
     order: 3;
   }
 }
@@ -2272,6 +2399,27 @@ svg {
   background-color: var(--color-well);
 }
 
+.ProductIngredients {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.product-ingredients-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.product-ingredients-copy {
+  margin-top: 1.5rem;
+  max-width: 40rem;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+
 .ProductReviews {
   padding-top: 4rem;
   padding-bottom: 4rem;
@@ -2366,7 +2514,7 @@ svg {
 
 .ProductRecommend {
   padding-top: 4rem;
-  padding-bottom: 4rem;
+  padding-bottom: 5rem;
   border-top: 1px solid var(--color-hairline);
 }
 
@@ -2386,27 +2534,18 @@ svg {
 
 /* ---------- Product information (legal label table) ---------- */
 
-.ProductInformation {
-  padding-top: 3rem;
-  padding-bottom: 4rem;
-  border-top: 1px solid var(--color-hairline);
-  background-color: var(--color-well);
+.product-information-heading {
+  margin: 0 0 2rem;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  text-align: left;
+  color: var(--color-ink);
 }
 
 .product-information-card {
-  padding: 2.25rem 1.25rem 1.5rem;
-  border: 1px solid var(--color-hairline);
-  border-radius: 1rem;
-  background-color: var(--color-white);
-}
-
-.product-information-heading {
-  margin: 0 0 1.75rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.28em;
-  text-align: center;
-  color: var(--color-ink);
+  padding: 0;
 }
 
 .product-information-list {
@@ -2415,26 +2554,31 @@ svg {
 
 .product-information-row {
   display: grid;
-  grid-template-columns: 6.75rem minmax(0, 1fr);
-  gap: 0.75rem 1rem;
-  padding: 0.95rem 0;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.75rem 1.25rem;
+  padding: 1rem 0;
   border-top: 1px solid var(--color-hairline);
 }
 
+.product-information-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
 .product-information-row:last-child {
-  padding-bottom: 0.35rem;
+  padding-bottom: 0;
 }
 
 .product-information-label,
 .product-information-value {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.7;
+  font-weight: 400;
 }
 
 .product-information-label {
   color: var(--color-muted);
-  font-weight: 500;
 }
 
 .product-information-value {
@@ -2444,6 +2588,7 @@ svg {
 .product-information-cautions {
   margin: 0;
   padding-left: 1.15rem;
+  list-style: decimal;
 }
 
 .product-information-cautions li + li {
@@ -2487,6 +2632,15 @@ svg {
     font-size: 2rem;
   }
 
+  .ProductIngredients {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+
+  .product-ingredients-heading {
+    font-size: 1.75rem;
+  }
+
   .ProductReviews {
     padding-top: 5rem;
     padding-bottom: 5rem;
@@ -2498,36 +2652,21 @@ svg {
 
   .ProductRecommend {
     padding-top: 5rem;
-    padding-bottom: 5rem;
+    padding-bottom: 7rem;
   }
 
   .recommend-heading {
     font-size: 1.75rem;
   }
 
-  .ProductInformation {
-    padding-top: 4rem;
-    padding-bottom: 5.5rem;
-  }
-
-  .product-information-card {
-    padding: 3rem 2.5rem 2rem;
-  }
-
   .product-information-heading {
-    font-size: 1.875rem;
-    letter-spacing: 0.34em;
+    margin-bottom: 2.5rem;
   }
 
   .product-information-row {
-    grid-template-columns: 9.5rem minmax(0, 1fr);
-    gap: 0.85rem 1.75rem;
-    padding: 1.1rem 0;
-  }
-
-  .product-information-label,
-  .product-information-value {
-    font-size: 0.875rem;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: 0.85rem 2rem;
+    padding: 1.15rem 0;
   }
 }
 
@@ -2547,10 +2686,10 @@ svg {
 
   .product-page-info {
     position: sticky;
-    top: 4rem;
+    top: var(--header-height);
     border-top: none;
     padding: 2.5rem 0 4rem 2rem;
-    min-height: calc(100vh - 4rem);
+    min-height: calc(100vh - var(--header-height));
   }
 
   .recommend-content {
@@ -2568,6 +2707,11 @@ svg {
   border-top: 1px solid var(--color-hairline);
 }
 
+.ProductPageTabs + .ProductDetailBanner,
+.ProductPageTabs + .product-page-banner-fold {
+  border-top: none;
+}
+
 .ProductDetailBanner ul,
 .ProductDetailBanner ol {
   margin: 0;
@@ -2583,17 +2727,57 @@ svg {
   overflow: hidden;
 }
 
+.ProductDetailBanner.is-collapsed .banner-hero,
+.product-page-banner-fold.is-collapsed .product-page-banner-summary {
+  padding-bottom: 1.15rem;
+}
+
+.banner-fold {
+  position: relative;
+}
+
+/*
+  Peek the first slice of the story, then fade it to white.
+  This is a functional mask (the "there is more" cue), not a decorative fill.
+*/
+.ProductDetailBanner.is-collapsed .banner-fold-body,
+.product-page-banner-fold.is-collapsed .banner-fold-body {
+  max-height: 8.5rem;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.banner-fold-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 1.2rem 1.25rem;
+  background: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0) 0%,
+    rgb(255 255 255 / 0.28) 38%,
+    var(--color-white) 100%
+  );
+}
+
+.banner-fold-veil .banner-fold-toggle {
+  margin-top: 0;
+}
+
 .banner-fold-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   margin-top: 1.25rem;
-  padding: 0.65rem 1.1rem;
-  border: 1px solid var(--color-hairline);
+  padding: 0.715rem 1.21rem;
+  border: 1px solid var(--color-brand);
   border-radius: 9999px;
   background-color: var(--color-white);
-  color: var(--color-ink);
-  font-size: 0.875rem;
+  color: var(--color-brand);
+  font-size: 0.9625rem;
   font-weight: 500;
   transition:
     color 150ms ease,
@@ -2602,8 +2786,8 @@ svg {
 }
 
 .banner-fold-toggle:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand);
+  border-color: var(--color-brand-hover);
+  color: var(--color-brand-hover);
   background-color: var(--color-wash);
 }
 
@@ -2613,10 +2797,6 @@ svg {
 
 .banner-fold-chevron.is-expanded {
   transform: rotate(180deg);
-}
-
-.banner-fold-body[hidden] {
-  display: none;
 }
 
 .banner-hero-media-block {
@@ -2643,9 +2823,6 @@ svg {
   padding: 2.4rem 1.2rem;
 }
 
-.banner-block + .banner-block {
-  border-top: 1px solid var(--color-hairline);
-}
 
 .banner-block--wash {
   background-color: var(--color-wash);
@@ -2676,7 +2853,7 @@ svg {
 }
 
 .banner-heading {
-  margin-top: 0.7rem;
+  margin: 1rem 0;
   max-width: 36rem;
   font-size: 1.5rem;
   font-weight: 700;
@@ -2870,7 +3047,7 @@ svg {
 }
 
 .banner-point-index {
-  font-family: var(--font-display);
+  font-family: var(--font-pretendard);
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -2901,25 +3078,96 @@ svg {
 
 .banner-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.4rem 1rem;
+  grid-template-columns: 1fr;
+  gap: 1.35rem;
   margin-top: 1.6rem;
+  max-width: 40rem;
+}
+
+.banner-stat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem 1.15rem;
+}
+
+.banner-stat-pie {
+  --stat-yes: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 5.25rem;
+  height: 5.25rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--color-brand) 0 calc(var(--stat-yes) * 1%),
+    var(--color-well) calc(var(--stat-yes) * 1%) 100%
+  );
+}
+
+.banner-stat-pie-hole {
+  position: absolute;
+  inset: 0.85rem;
+  border-radius: 50%;
+  background-color: var(--color-white);
 }
 
 .banner-stat-value {
+  position: relative;
+  z-index: 1;
+  margin: 0;
   font-family: var(--font-pretendard);
-  font-size: 2rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--color-brand);
 }
 
+.banner-stat-copy {
+  min-width: 0;
+}
+
 .banner-stat-label {
-  margin-top: 0.35rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+.banner-stat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  margin: 0.55rem 0 0;
+}
+
+.banner-stat-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
   color: var(--color-muted);
+}
+
+.banner-stat-legend-item::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+
+.banner-stat-legend-item--yes::before {
+  background-color: var(--color-brand);
+}
+
+.banner-stat-legend-item--no::before {
+  background-color: var(--color-well);
+  box-shadow: inset 0 0 0 1px var(--color-hairline);
 }
 
 .banner-caption {
@@ -2931,7 +3179,7 @@ svg {
 }
 
 .banner-note {
-  margin-top: 1rem;
+  margin: 1rem 0;
   max-width: 38rem;
   padding: 0.8rem 0.9rem;
   background-color: var(--color-white);
@@ -2953,30 +3201,71 @@ svg {
   color: var(--color-ink);
 }
 
-.banner-how-group .banner-steps {
-  margin-top: 0.65rem;
+.banner-how-group .banner-roadmap {
+  margin-top: 0.85rem;
 }
 
-.banner-steps {
-  margin-top: 1.2rem;
+/* Vertical roadmap — numbered nodes on a continuous path */
+.banner-roadmap {
+  margin: 1.6rem 0 0;
+  padding: 0;
   max-width: 40rem;
+  list-style: none;
 }
 
-.banner-step {
+.banner-roadmap-step {
   display: grid;
-  grid-template-columns: 1.75rem minmax(0, 1fr);
-  gap: 0.6rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--color-hairline);
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  column-gap: 1rem;
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+
+.banner-roadmap-step:last-child {
+  padding-bottom: 0;
+}
+
+/* Connecting line between nodes (centered under the circle) */
+.banner-roadmap-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 1.125rem;
+  top: 2.25rem;
+  bottom: 0;
+  width: 1px;
+  background-color: rgba(99, 41, 140, 0.22);
+  transform: translateX(-50%);
+}
+
+.banner-roadmap-marker {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.1rem;
+}
+
+.banner-roadmap-index {
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--color-brand);
+  color: var(--color-white);
+  font-family: var(--font-pretendard);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner-roadmap-copy {
+  margin: 0;
+  padding-top: 0.35rem;
   font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--color-ink);
-}
-
-.banner-step-index {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-brand);
 }
 
 .banner-guide-heading {
@@ -3009,6 +3298,11 @@ svg {
 }
 
 @media (min-width: 640px) {
+  .ProductDetailBanner.is-collapsed .banner-fold-body,
+  .product-page-banner-fold.is-collapsed .banner-fold-body {
+    max-height: 10.5rem;
+  }
+
   .banner-block,
   .product-page-banner-summary {
     padding: 3rem 1.6rem;
@@ -3045,12 +3339,18 @@ svg {
   }
 
   .banner-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.6rem 1.2rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.6rem 1.5rem;
+    max-width: none;
+  }
+
+  .banner-stat-pie {
+    width: 5.75rem;
+    height: 5.75rem;
   }
 
   .banner-stat-value {
-    font-size: 2.1rem;
+    font-size: 1rem;
   }
 }
 
@@ -3144,7 +3444,9 @@ svg {
 .not-found-cta {
   display: inline-flex;
   align-items: center;
-  padding: 0.85rem 1.5rem;
+  min-height: var(--control-height);
+  padding: 0 1.5rem;
+  border-radius: 9999px;
   font-size: 0.9375rem;
   color: var(--color-white);
   background: var(--color-brand);
@@ -3163,11 +3465,9 @@ svg {
   padding-bottom: 4rem;
 }
 
-.cart-page-wrapper {
-  max-width: var(--page-max);
-  margin-left: auto;
-  margin-right: auto;
-}
+/* Do not add max-width here. .container already uses --page-inset to
+   match the 1200px column. A second max-width shrinks copy as the
+   window gets wider. */
 
 .cart-page-heading {
   margin: 0 0 2rem;
@@ -3184,12 +3484,14 @@ svg {
   color: var(--color-muted);
 }
 
-.cart-empty {
+.cart-empty,
+.wishlist-empty {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 1.25rem;
-  padding: 3rem 0;
+  padding-top: 1.5rem;
+  padding-bottom: var(--section-space);
 }
 
 .cart-empty-cta {
@@ -3427,12 +3729,6 @@ svg {
   padding-bottom: 4rem;
 }
 
-.wishlist-page-wrapper {
-  max-width: var(--page-max);
-  margin-left: auto;
-  margin-right: auto;
-}
-
 .wishlist-page-heading {
   margin: 0;
   font-size: 1.75rem;
@@ -3446,14 +3742,6 @@ svg {
   margin: 0.5rem 0 0;
   font-size: 0.9375rem;
   color: var(--color-muted);
-}
-
-.wishlist-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1.25rem;
-  padding: 3rem 0;
 }
 
 .wishlist-empty-copy {
@@ -3477,12 +3765,6 @@ svg {
   min-height: 50vh;
   padding-top: 3rem;
   padding-bottom: 4.5rem;
-}
-
-.login-page-wrapper {
-  max-width: var(--page-max);
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .login-panel {
@@ -3635,9 +3917,10 @@ svg {
 
 .login-field input {
   width: 100%;
+  min-height: var(--control-height);
   padding: 0.8rem 0.95rem;
   border: 1px solid var(--color-hairline);
-  border-radius: 0.7rem;
+  border-radius: var(--radius-photo);
   background-color: var(--color-white);
   color: var(--color-ink);
   font: inherit;
@@ -3686,7 +3969,7 @@ svg {
 
 .footer-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1.5rem;
 }
@@ -3700,9 +3983,22 @@ svg {
 }
 
 .footer-copy {
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   font-size: 0.875rem;
+  line-height: 1.6;
   color: var(--color-muted);
+}
+
+.footer-brand .footer-copy:first-of-type {
+  margin-top: 0.75rem;
+}
+
+.footer-copy a {
+  color: var(--color-ink);
+}
+
+.footer-copy a:hover {
+  color: var(--color-brand);
 }
 
 .footer-legal {

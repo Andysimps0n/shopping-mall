@@ -6,6 +6,8 @@ import ProductCard from "./ProductCard";
 import ProductDetailBanner from "./ProductDetailBanner";
 import ProductImage from "./ProductImage";
 import ProductInformation from "./ProductInformation";
+import ProductIngredients from "./ProductIngredients";
+import ProductPageTabs from "./ProductPageTabs";
 import ProductPlaceholderBanner from "./ProductPlaceholderBanner";
 import ProductReviews from "./ProductReviews";
 import { getProductBanner } from "@/lib/productBanners";
@@ -13,15 +15,16 @@ import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/p
 
 /**
  * Product detail layout:
- * - Left column (majority of the width): large product image, then a long banner.
+ * - Left column: product image, then tabs (제품 정보 / 전성분 / 리뷰)
+ *   sitting just above the story banner-hero, then the legal table.
  * - Right column: name, story, price, buy button. Stays sticky while you scroll.
- * - Below: customer reviews, four recommended product cards, then the
- *   INFORMATION label table (용량·전성분·주의사항).
+ * - Below: full ingredients, customer reviews, then four recommended product cards.
  *
  * The long banner is opt-in per product. If `getProductBanner(id)` returns
  * content, we render the editorial story. Products without an entry keep
- * the short placeholder. Both banners start collapsed so reviews are nearer
- * the top of the page. Each banner can skip sections it has no copy for.
+ * the short placeholder. Both banners start collapsed so the tabs can
+ * reach 제품 정보 without opening the whole story first. Each banner
+ * can skip sections it has no copy for.
  */
 export default function ProductDetail({ product, recommended, reviews }) {
   const banner = getProductBanner(product.id);
@@ -41,21 +44,38 @@ export default function ProductDetail({ product, recommended, reviews }) {
             />
           </div>
 
-          {banner ? (
-            <ProductDetailBanner
-              product={product}
-              banner={banner}
-              imageSrc={imageSrc}
-            />
-          ) : (
-            <ProductPlaceholderBanner product={product} />
-          )}
+          <div id="product-information" className="product-page-catalog">
+            <ProductPageTabs />
+
+            {banner ? (
+              <ProductDetailBanner
+                product={product}
+                banner={banner}
+                imageSrc={imageSrc}
+              />
+            ) : (
+              <ProductPlaceholderBanner product={product} />
+            )}
+
+            <section
+              className="banner-block"
+              aria-labelledby="product-information-heading"
+            >
+              <h2
+                id="product-information-heading"
+                className="product-information-heading"
+              >
+                제품 정보
+              </h2>
+              <ProductInformation product={product} />
+            </section>
+          </div>
         </div>
 
         <aside className="product-page-info">
           <div className="product-page-info-content">
             <nav className="product-page-breadcrumb" aria-label="경로">
-              <Link href="/">Home</Link>
+              <Link href="/">홈</Link>
               <span aria-hidden="true"> / </span>
               <Link href={`/#${getCollectionSectionId(product.category)}`}>
                 {product.categoryLabel}
@@ -66,19 +86,20 @@ export default function ProductDetail({ product, recommended, reviews }) {
               {product.name}
             </h1>
             <p className="product-page-description">{product.description}</p>
-            <p className="product-page-story">{product.story}</p>
             <p className="product-page-price">{formatPrice(product.price)}</p>
 
             <div className="product-page-actions">
-              <button type="button" className="button product-page-buy">
+              <AddToCartButton productId={product.id} />
+              <button type="button" className="button button--secondary product-page-buy">
                 구매하기
               </button>
-              <AddToCartButton productId={product.id} />
               <WishlistButton productId={product.id} />
             </div>
           </div>
         </aside>
       </section>
+
+      <ProductIngredients product={product} />
 
       <ProductReviews reviews={reviews} />
 
@@ -98,8 +119,6 @@ export default function ProductDetail({ product, recommended, reviews }) {
           </div>
         </div>
       </section>
-
-      <ProductInformation product={product} />
     </main>
   );
 }

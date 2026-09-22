@@ -7,7 +7,8 @@ import StorePicture from "./StorePicture";
  * Long-form product story that sits under the gallery image.
  *
  * Starts collapsed so the reviews section can enter the first viewport.
- * Shoppers expand to read the full editorial story.
+ * Collapsed state still peeks the top of the story, faded with a
+ * gradient, so the "더보기" button sits on real upcoming content.
  *
  * This component is data-driven: it only renders when `banner` is passed in.
  * ProductDetail looks the content up by product id. Each product can include
@@ -21,8 +22,9 @@ import StorePicture from "./StorePicture";
  * @param {object} props.product
  * @param {import("@/lib/productBanners").ProductBanner} props.banner
  * @param {string} [props.imageSrc] Catalog thumbnail, used only if banner.images is empty.
+ * @param {import("react").ReactNode} [props.children] Optional extra block after the story.
  */
-export default function ProductDetailBanner({ product, banner, imageSrc }) {
+export default function ProductDetailBanner({ product, banner, imageSrc, children }) {
   // Collapsed by default so "고객 리뷰" is closer when you land on the page.
   const [expanded, setExpanded] = useState(false);
   const bodyId = useId();
@@ -67,30 +69,28 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
       aria-labelledby="banner-hero-heading"
     >
       <section className="banner-block banner-hero">
-        <p className="banner-kicker">{banner.kicker}</p>
         <p className="banner-product-name">{product.name}</p>
         <h2 id="banner-hero-heading" className="banner-heading">
           {flowText(banner.heading)}
         </h2>
         <p className="banner-copy banner-copy--preview">{banner.intro}</p>
 
-        <button
-          type="button"
-          className="banner-fold-toggle"
-          aria-expanded={expanded}
-          aria-controls={bodyId}
-          onClick={toggleExpanded}
-        >
-          {expanded ? "스토리 접기" : "제품 스토리 더보기"}
-          <FoldChevron expanded={expanded} />
-        </button>
+        {expanded ? (
+          <FoldToggle
+            expanded
+            bodyId={bodyId}
+            onClick={toggleExpanded}
+          />
+        ) : null}
       </section>
 
-      <div
-        id={bodyId}
-        className="banner-fold-body"
-        hidden={!expanded}
-      >
+      <div className="banner-fold">
+        <div
+          id={bodyId}
+          className="banner-fold-body"
+          inert={!expanded}
+          aria-hidden={!expanded}
+        >
         {photos[0] ? <BannerPhoto src={photos[0]} /> : null}
 
         {hasPillars ? (
@@ -128,9 +128,6 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             >
               {flowText(banner.symptomsHeading)}
             </h3>
-            {banner.symptomsLead ? (
-              <p className="banner-copy">{banner.symptomsLead}</p>
-            ) : null}
             <ul className="banner-symptoms">
               {banner.symptoms.map((symptom) => (
                 <li key={symptom}>{symptom}</li>
@@ -150,18 +147,7 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             >
               {flowText(banner.freeHeading)}
             </h3>
-            {banner.freeLead ? (
-              <p className="banner-copy">{banner.freeLead}</p>
-            ) : null}
-            {hasItems(banner.freeHighlights) ? (
-              <p className="banner-highlights">
-                {banner.freeHighlights.map((item) => (
-                  <span key={item} className="banner-highlight">
-                    {item}
-                  </span>
-                ))}
-              </p>
-            ) : null}
+
             <ul className="banner-free-list">
               {banner.freeItems.map((item) => (
                 <li key={item.title} className="banner-free-item">
@@ -184,9 +170,6 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
             >
               {flowText(banner.pointsHeading)}
             </h3>
-            {banner.pointsLead ? (
-              <p className="banner-copy">{banner.pointsLead}</p>
-            ) : null}
             <ol className="banner-points">
               {banner.points.map((point) => (
                 <li key={point.index} className="banner-point">
@@ -254,12 +237,32 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
               <p className="banner-copy">{banner.statsLead}</p>
             ) : null}
             <ul className="banner-stats">
-              {banner.stats.map((stat) => (
-                <li key={stat.label} className="banner-stat">
-                  <p className="banner-stat-value">{stat.value}</p>
-                  <p className="banner-stat-label">{stat.label}</p>
-                </li>
-              ))}
+              {banner.stats.map((stat) => {
+                const yesPercent = parseStatPercent(stat.value) ?? 0;
+                const noPercent = Math.max(0, 100 - yesPercent);
+
+                return (
+                  <li key={stat.label} className="banner-stat">
+                    <StatPie
+                      value={stat.value}
+                      label={stat.label}
+                      yesPercent={yesPercent}
+                      noPercent={noPercent}
+                    />
+                    <div className="banner-stat-copy">
+                      <p className="banner-stat-label">{stat.label}</p>
+                      <p className="banner-stat-legend">
+                        <span className="banner-stat-legend-item banner-stat-legend-item--yes">
+                          Yes {yesPercent}%
+                        </span>
+                        <span className="banner-stat-legend-item banner-stat-legend-item--no">
+                          No {noPercent}%
+                        </span>
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
             {banner.statsCaption ? (
               <p className="banner-caption">{banner.statsCaption}</p>
@@ -290,36 +293,15 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
                         {group.note ? (
                           <p className="banner-copy">{group.note}</p>
                         ) : null}
-                        <ol className="banner-steps">
-                          {group.steps.map((step, index) => (
-                            <li
-                              key={`${group.title}-${index}`}
-                              className="banner-step"
-                            >
-                              <span
-                                className="banner-step-index"
-                                aria-hidden="true"
-                              >
-                                {index + 1}
-                              </span>
-                              <p>{step}</p>
-                            </li>
-                          ))}
-                        </ol>
+                        <HowRoadmap
+                          steps={group.steps}
+                          keyPrefix={group.title}
+                        />
                       </div>
                     ))
                   : null}
                 {hasItems(banner.howSteps) ? (
-                  <ol className="banner-steps">
-                    {banner.howSteps.map((step, index) => (
-                      <li key={step} className="banner-step">
-                        <span className="banner-step-index" aria-hidden="true">
-                          {index + 1}
-                        </span>
-                        <p>{step}</p>
-                      </li>
-                    ))}
-                  </ol>
+                  <HowRoadmap steps={banner.howSteps} />
                 ) : null}
               </>
             ) : null}
@@ -355,18 +337,37 @@ export default function ProductDetailBanner({ product, banner, imageSrc }) {
           <BannerPhoto key={src} src={src} />
         ))}
 
-        <div className="banner-fold-footer">
-          <button
-            type="button"
-            className="banner-fold-toggle"
-            aria-expanded={expanded}
-            aria-controls={bodyId}
-            onClick={toggleExpanded}
+        {children ? (
+          <section
+            className="banner-block"
+            aria-labelledby="product-information-heading"
           >
-            스토리 접기
-            <FoldChevron expanded />
-          </button>
+            <h3
+              id="product-information-heading"
+              className="product-information-heading"
+            >
+              INFORMATION
+            </h3>
+            {children}
+          </section>
+        ) : null}
+
+        {expanded ? (
+          <div className="banner-fold-footer">
+            <FoldToggle
+              expanded
+              bodyId={bodyId}
+              onClick={toggleExpanded}
+            />
+          </div>
+        ) : null}
         </div>
+
+        {expanded ? null : (
+          <div className="banner-fold-veil">
+            <FoldToggle bodyId={bodyId} onClick={toggleExpanded} />
+          </div>
+        )}
       </div>
     </article>
   );
@@ -387,12 +388,50 @@ function BannerPhoto({ src }) {
   );
 }
 
+/**
+ * Vertical roadmap for "사용 방법".
+ * Numbered nodes sit on a continuous line so the steps read as a path,
+ * not a flat bullet list.
+ */
+function HowRoadmap({ steps, keyPrefix = "" }) {
+  return (
+    <ol className="banner-roadmap">
+      {steps.map((step, index) => (
+        <li
+          key={`${keyPrefix}${step}`}
+          className="banner-roadmap-step"
+        >
+          <span className="banner-roadmap-marker" aria-hidden="true">
+            <span className="banner-roadmap-index">{index + 1}</span>
+          </span>
+          <p className="banner-roadmap-copy">{step}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function FoldToggle({ expanded = false, bodyId, onClick }) {
+  return (
+    <button
+      type="button"
+      className="banner-fold-toggle"
+      aria-expanded={expanded}
+      aria-controls={bodyId}
+      onClick={onClick}
+    >
+      {expanded ? "스토리 접기" : "제품 스토리 더보기"}
+      <FoldChevron expanded={expanded} />
+    </button>
+  );
+}
+
 function FoldChevron({ expanded }) {
   return (
     <svg
       viewBox="0 0 16 16"
-      width="14"
-      height="14"
+      width="15"
+      height="15"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
@@ -408,8 +447,37 @@ function FoldChevron({ expanded }) {
   );
 }
 
+/**
+ * One survey answer as a Yes / No pie.
+ * Catalog keeps only the Yes % (e.g. "96%"). No is the remainder.
+ */
+function StatPie({ value, label, yesPercent, noPercent }) {
+  return (
+    <div
+      className="banner-stat-pie"
+      style={{ "--stat-yes": yesPercent }}
+      role="img"
+      aria-label={`${label}: Yes ${yesPercent}%, No ${noPercent}%`}
+    >
+      <span className="banner-stat-pie-hole" aria-hidden="true" />
+      <span className="banner-stat-value">{value}</span>
+    </div>
+  );
+}
+
 function hasItems(items) {
   return Array.isArray(items) && items.length > 0;
+}
+
+// "96%" → 96. Used for the Yes slice; No is 100 − Yes.
+function parseStatPercent(value) {
+  const match = String(value).match(/(\d+(?:\.\d+)?)\s*%/);
+  if (!match) return null;
+
+  const percent = Number(match[1]);
+  if (Number.isNaN(percent)) return null;
+
+  return Math.min(100, Math.max(0, percent));
 }
 
 // Headings may still contain \n from older copy. Join them so the

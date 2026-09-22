@@ -30,16 +30,17 @@ export const CATEGORY_LABELS = {
 export const products = [
   {
     id: "silk-repair-shampoo",
-    name: "엔클로이 두피 샴푸",
+    name: "앤클로이 두피 샴푸",
     tagline: "손상된 모발을\n매일 실크처럼",
-    description: "약산성 저자극 포뮬러로 매일의 세정을 부드럽게.",
+    description:
+      "유해한 화학물질이 들어있지 않은 무오일 타입의 천연샴푸.",
     price: 50000,
     category: "hair",
     categoryLabel: CATEGORY_LABELS.hair,
     image: "/products/shampoo.jpg",
     heroImage: "/carousel/shampoo_wide.jpg",
     story:
-      "살롱에서 매일 마주한 손상 모발을 위해 만든 데일리 샴푸입니다. 약산성 저자극 포뮬러가 두피 자극은 덜고, 씻을수록 부드러워지는 결을 남깁니다.",
+      "다당체 포집 작용으로 막힌 모공을 뚫어내고 천연 아미노산 세정성분으로 두피 보호막 손상없이 클린세정이 가능합니다. 남녀노소 두피타입에 관계없이 사용할 수 있으며 문제성 두피를 정상화시킵니다. 아미노산과 다당체가 대기 중의 수분을 흡착하여 부드러운 머릿결을 유지시킴으로 린스는 필요 없습니다. 강력한 항산화효과의 식물성 미네랄이 산화되는 두피를 건강한 두피로 유지시킵니다.",
   },
   {
     id: "moisture-glow-treatment",
@@ -58,14 +59,15 @@ export const products = [
     id: "volume-lift-essence",
     name: "스킨&바디 보습 로션",
     tagline: "오일 없이\n수분만 남기다",
-    description: "가벼운 텍스처로 모근에 힘을 실어주는 데일리 에센스.",
+    description:
+      "무오일 타입의 천연 바디로션으로 피부보습과 각질층 케어에 효과적입니다.",
     price: 49000,
     category: "skin",
     categoryLabel: CATEGORY_LABELS.skin,
     image: "/products/lotion.jpg",
     heroImage: "/carousel/lotion_wide.jpg",
     story:
-      "뿌리부터 가볍게 세워 주는 데일리 에센스입니다. 끈적임 없는 텍스처가 모근에 힘을 더해, 부스스하지 않은 자연스러운 볼륨을 완성합니다.",
+      "샤워 후에나 혹은 건조할 때 바디는 물론 핸드까지 촉촉하게 사용됩니다. 워터타입의 바디로션이 피부의 수분 밸런스를 맞춰주며 식물 미네랄의 강력한 항산화 효과로 피부를 투명하고 젊게 유지시킵니다.",
   },
   {
     id: "scalp-balance-tonic",

@@ -1,259 +1,265 @@
 import Link from "next/link";
-import { brand } from "@/lib/brand";
-import FreeIcon from "./FreeIcon";
-import StorePicture from "./StorePicture";
+import BrandPageNav from "@/components/BrandPageNav";
+import { brand, brandPage } from "@/lib/brand";
+import { getProductPhotoSrc, products } from "@/lib/products";
 
-function BrandIndexList({ items, className }) {
+/**
+ * Editorial /brand page.
+ *
+ * Layout only — every sentence lives in lib/brand.js (brandPage), and the
+ * product list comes from lib/products.js.
+ *
+ * Section order:
+ *   hero → statement → salon origin → observation archive →
+ *   product principles → ritual → product family → transparency + closing
+ */
+
+/**
+ * Photo slot. `ratio` keeps the frame when the image is missing.
+ *
+ * @param {object} props
+ * @param {string} props.label
+ * @param {"landscape" | "portrait" | "square"} props.ratio
+ * @param {string} [props.src]
+ * @param {string} [props.alt]
+ */
+function BrandMedia({ label, ratio, src, alt }) {
   return (
-    <ol className={className}>
-      {items.map((item) => (
-        <li key={item.index} className="brand-index-card">
-          <p className="brand-pillar-index">{item.index}</p>
-          <h3 className="brand-pillar-title">{item.title}</h3>
-          <p className="brand-pillar-copy">{item.copy}</p>
-        </li>
-      ))}
-    </ol>
+    <figure className={`bp-media bp-media--${ratio}`}>
+      {src ? (
+        <img src={src} alt={alt || label} className="bp-media-photo" />
+      ) : (
+        <span className="bp-media-label">{label}</span>
+      )}
+    </figure>
   );
 }
 
-// Full brand story for /brand. Copy lives in lib/brand.js so this file
-// stays about layout. The order follows the catalog PDF: cover →
-// philosophy → 6無 → challenge → mineral → approach →
-// vial → word of mouth → who-it's-for / stats → company close.
 export default function BrandStory() {
+  const { nav, hero, statement, origin, observation, principles, ritual, family, transparency } =
+    brandPage;
+
   return (
     <main className="BrandPage">
-      <section className="brand-hero" aria-labelledby="brand-page-heading">
-        <div className="brand-hero-copy">
-          <p className="brand-eyebrow">{brand.eyebrow}</p>
-          <p className="brand-kicker">{brand.kicker}</p>
-          <p className="brand-heading-line">{brand.headingLine}</p>
-          <h1 id="brand-page-heading" className="brand-heading">
-            {brand.heading}
-          </h1>
-          <p className="brand-lead">{brand.lead}</p>
+      {/* Outside the hero so sticky lasts for the whole page.
+          Scroll direction lives in BrandPageNav (client). */}
+      <BrandPageNav links={[...nav.links, nav.contact]} />
 
-          <ul className="brand-highlights">
-            {brand.highlights.map((item) => (
-              <li key={item.value} className="brand-highlight">
-                <p className="brand-highlight-value">{item.value}</p>
-                <p className="brand-highlight-label">{item.label}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <figure className="brand-hero-media">
+      {/* 1. Hero — lineup photo, then the title under the frame. */}
+      <section className="bp-hero container" aria-label="브랜드 소개">
+        <div className="bp-hero-frame">
           <img
+            className="bp-hero-photo"
             src={brand.lineupImage}
             alt={brand.lineupAlt}
-            className="brand-hero-photo"
           />
-        </figure>
-      </section>
+        </div>
 
-      <section
-        className="brand-section"
-        aria-labelledby="brand-story-heading"
-      >
-        <div className="brand-section-wrapper container">
-          <p className="brand-eyebrow">{brand.storyKicker}</p>
-          <h2 id="brand-story-heading" className="brand-section-heading">
-            {brand.storyHeading}
-          </h2>
-          <p className="brand-lead">{brand.storyLead}</p>
-          <p className="brand-copy">{brand.storyCopy}</p>
-
-          <BrandIndexList items={brand.pillars} className="brand-pillars" />
+        <div className="bp-hero-copy">
+          <div>
+            <p className="bp-hero-eyebrow">{hero.eyebrow}</p>
+            <h1 className="bp-hero-title">{hero.title}</h1>
+          </div>
+          <div className="bp-hero-aside">
+            <p className="bp-hero-desc">{hero.description}</p>
+            <a className="button" href={hero.ctaHref}>
+              {hero.ctaLabel}
+            </a>
+          </div>
         </div>
       </section>
 
+      {/* 2. Brand statement — one sentence, the longest-lasting message. */}
       <section
-        className="brand-section brand-section--wash"
-        aria-labelledby="brand-free-heading"
+        id="brand-statement"
+        className="bp-section"
+        aria-labelledby="bp-statement-heading"
       >
-        <div className="brand-section-wrapper container">
-          <p className="brand-eyebrow">{brand.freeKicker}</p>
-          <h2 id="brand-free-heading" className="brand-section-heading">
-            {brand.freeHeading}
+        <div className="bp-statement-wrapper container">
+          <p className="bp-eyebrow">{statement.eyebrow}</p>
+          <h2 id="bp-statement-heading" className="bp-statement">
+            {statement.sentence}
           </h2>
-          <p className="brand-lead">{brand.freeLead}</p>
+        </div>
+      </section>
 
-          <ul className="brand-free-grid">
-            {brand.freeItems.map((item) => (
-              <li key={item.id} className="brand-free-card">
-                <FreeIcon name={item.id} />
-                <h3 className="brand-free-title">{item.title}</h3>
-                <p className="brand-free-copy">{item.copy}</p>
+      {/* 3. Salon origin — asymmetric 7:5 split. */}
+      <section
+        className="bp-section bp-section--parchment"
+        aria-labelledby="bp-origin-heading"
+      >
+        <div className="bp-origin-grid container">
+          <BrandMedia
+            label={origin.placeholderLabel}
+            ratio="landscape"
+            src="/products/shampoo/lifestyle.jpg"
+            alt="앤클로이 두피 샴푸"
+          />
+          <div>
+            <p className="bp-eyebrow">{origin.eyebrow}</p>
+            <h2 id="bp-origin-heading" className="bp-section-heading">
+              {origin.heading}
+            </h2>
+            {origin.paragraphs.map((paragraph) => (
+              <p key={paragraph} className="bp-copy">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Observation archive — document list, thin dividers. */}
+      <section className="bp-section" aria-labelledby="bp-observation-heading">
+        <div className="container">
+          <p className="bp-eyebrow">{observation.eyebrow}</p>
+          <h2 id="bp-observation-heading" className="bp-section-heading">
+            {observation.heading}
+          </h2>
+
+          <ol className="bp-archive-list">
+            {observation.items.map((item) => (
+              <li key={item.index} className="bp-archive-item">
+                <span className="bp-archive-index">{item.index}</span>
+                <div>
+                  <h3 className="bp-archive-title">{item.title}</h3>
+                  <p className="bp-archive-copy">{item.copy}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* 5. Product principles — the trust section, styled as a record. */}
+      <section
+        id="principles"
+        className="bp-section bp-section--parchment"
+        aria-labelledby="bp-principles-heading"
+      >
+        <div className="container">
+          <p className="bp-eyebrow">{principles.eyebrow}</p>
+          <h2 id="bp-principles-heading" className="bp-section-heading">
+            {principles.heading}
+          </h2>
+          <p className="bp-free-line">
+            {brand.freeItems.map((item) => item.title).join(" · ")}
+          </p>
+
+          <dl className="bp-principles-table">
+            {principles.rows.map((row) => (
+              <div key={row.term} className="bp-principles-row">
+                <dt>{row.term}</dt>
+                <dd>{row.detail}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* 6. Ritual — portrait media + three large step numbers. */}
+      <section className="bp-section" aria-labelledby="bp-ritual-heading">
+        <div className="bp-ritual-grid container">
+          <BrandMedia
+            label={ritual.placeholderLabel}
+            ratio="portrait"
+            src="/products/lotion/lifestyle.jpg"
+            alt="앤클로이 스킨&바디 보습 로션"
+          />
+          <div>
+            <p className="bp-eyebrow">{ritual.eyebrow}</p>
+            <h2 id="bp-ritual-heading" className="bp-section-heading">
+              {ritual.heading}
+            </h2>
+
+            <ol className="bp-ritual-steps">
+              {ritual.steps.map((step) => (
+                <li key={step.number} className="bp-ritual-step">
+                  <div className="bp-ritual-step-body">
+                    <span className="bp-ritual-number" aria-hidden="true">
+                      {step.number}
+                    </span>
+                    <div>
+                      <h3 className="bp-ritual-title">{step.title}</h3>
+                      <p className="bp-ritual-copy">{step.copy}</p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Product family — no prices, no badges, text link only. */}
+      <section
+        id="products"
+        className="bp-section bp-section--parchment"
+        aria-labelledby="bp-family-heading"
+      >
+        <div className="container">
+          <p className="bp-eyebrow">{family.eyebrow}</p>
+          <h2 id="bp-family-heading" className="bp-section-heading">
+            {family.heading}
+          </h2>
+
+          <ul className="bp-family-grid">
+            {products.map((product) => (
+              <li key={product.id} className="bp-family-item">
+                <Link
+                  href={`/products/${product.id}`}
+                  className="bp-family-link"
+                >
+                  <BrandMedia
+                    label={product.name}
+                    ratio="square"
+                    src={getProductPhotoSrc(product)}
+                    alt=""
+                  />
+                  <h3 className="bp-family-name">{product.name}</h3>
+                  <p className="bp-family-role">{product.description}</p>
+                  <span className="bp-text-link">{family.linkLabel}</span>
+                </Link>
               </li>
             ))}
           </ul>
         </div>
       </section>
 
+      {/* 8. Transparency + closing. Only verifiable records. */}
       <section
-        className="brand-section"
-        aria-labelledby="brand-challenge-heading"
+        id="contact"
+        className="bp-section"
+        aria-labelledby="bp-transparency-heading"
       >
-        <div className="brand-section-wrapper container">
-          <p className="brand-eyebrow">{brand.challengeKicker}</p>
-          <h2 id="brand-challenge-heading" className="brand-section-heading">
-            {brand.challengeHeading}
+        <div className="container">
+          <p className="bp-eyebrow">{transparency.eyebrow}</p>
+          <h2 id="bp-transparency-heading" className="bp-section-heading">
+            {transparency.heading}
           </h2>
-          <p className="brand-lead">{brand.challengeLead}</p>
-          <p className="brand-copy">{brand.challengeCopy}</p>
 
-          <BrandIndexList
-            items={brand.challengeItems}
-            className="brand-pillars"
-          />
-        </div>
-      </section>
+          <dl className="bp-transparency-table">
+            {transparency.rows.map((row) => (
+              <div key={row.term} className="bp-principles-row">
+                <dt>{row.term}</dt>
+                <dd>{row.detail}</dd>
+              </div>
+            ))}
+          </dl>
 
-      <section
-        className="brand-section"
-        aria-labelledby="brand-mineral-heading"
-      >
-        <div className="brand-mineral-wrapper container">
-          <figure className="brand-photo-frame">
-            <StorePicture
-              src={brand.mineralPhoto}
-              alt={brand.mineralPhotoAlt}
-              className="brand-pack-photo"
-            />
-          </figure>
+          <div className="bp-closing">
+            <p className="bp-closing-sentence">
+              {transparency.closingSentence}
+            </p>
+            <Link href={transparency.ctaHref} className="bp-pill bp-pill--ink">
+              {transparency.ctaLabel}
+            </Link>
 
-          <div className="brand-mineral-content">
-            <p className="brand-eyebrow">{brand.mineralKicker}</p>
-            <h2 id="brand-mineral-heading" className="brand-section-heading">
-              {brand.mineralHeading}
-            </h2>
-            <p className="brand-lead">{brand.mineralLead}</p>
-            <p className="brand-copy">{brand.mineralCopy}</p>
-
-            <dl className="brand-compare">
-              {brand.mineralCompare.map((row) => (
-                <div key={row.label} className="brand-compare-row">
-                  <dt className="brand-compare-label">{row.label}</dt>
-                  <dd className="brand-compare-value">{row.value}</dd>
-                  <dd className="brand-compare-note">{row.note}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="brand-footnote">{brand.mineralFootnote}</p>
+            <p className="bp-company-line">
+              {brand.companyName} · {brand.companyAddress} ·{" "}
+              <a href={brand.companyTelHref}>{brand.companyTelLabel}</a>
+            </p>
           </div>
-        </div>
-      </section>
-
-      <section
-        className="brand-section brand-section--wash"
-        aria-labelledby="brand-approach-heading"
-      >
-        <div className="brand-section-wrapper container">
-          <p className="brand-eyebrow">{brand.approachKicker}</p>
-          <h2 id="brand-approach-heading" className="brand-section-heading">
-            {brand.approachHeading}
-          </h2>
-          <p className="brand-lead">{brand.approachLead}</p>
-
-          <BrandIndexList
-            items={brand.approachItems}
-            className="brand-approach-grid"
-          />
-        </div>
-      </section>
-
-      <section
-        className="brand-section"
-        aria-labelledby="brand-vial-heading"
-      >
-        <div className="brand-mineral-wrapper container">
-          <figure className="brand-photo-frame">
-            <StorePicture
-              src={brand.vialPhoto}
-              alt={brand.vialPhotoAlt}
-              className="brand-pack-photo"
-            />
-          </figure>
-
-          <div className="brand-mineral-content">
-            <p className="brand-eyebrow">{brand.vialKicker}</p>
-            <h2 id="brand-vial-heading" className="brand-section-heading">
-              {brand.vialHeading}
-            </h2>
-            <p className="brand-lead">{brand.vialLead}</p>
-            <p className="brand-copy">{brand.vialCopy}</p>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="brand-quote"
-        aria-labelledby="brand-quote-heading"
-      >
-        <div className="brand-quote-wrapper">
-          <p className="brand-eyebrow">{brand.quoteKicker}</p>
-          <h2 id="brand-quote-heading" className="visually-hidden">
-            {brand.quoteCredit}
-          </h2>
-          <blockquote className="brand-quote-text">
-            {brand.quote}
-          </blockquote>
-          <p className="brand-quote-credit">{brand.quoteCredit}</p>
-        </div>
-      </section>
-
-      <section
-        className="brand-section"
-        aria-labelledby="brand-for-heading"
-      >
-        <div className="brand-split-wrapper container">
-          <div className="brand-split-copy">
-            <p className="brand-eyebrow">FOR YOU</p>
-            <h2 id="brand-for-heading" className="brand-section-heading">
-              {brand.forHeading}
-            </h2>
-            <ul className="brand-for-list">
-              {brand.forItems.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="brand-split-stats">
-            <h3 className="brand-stats-heading">{brand.statsHeading}</h3>
-            <p className="brand-copy">{brand.statsLead}</p>
-            <ul className="brand-stats">
-              {brand.stats.map((stat) => (
-                <li key={stat.label} className="brand-stat">
-                  <p className="brand-stat-value">{stat.value}</p>
-                  <p className="brand-stat-label">{stat.label}</p>
-                </li>
-              ))}
-            </ul>
-            <p className="brand-footnote">{brand.statsCaption}</p>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="brand-company"
-        aria-labelledby="brand-company-heading"
-      >
-        <div className="brand-company-wrapper container">
-          <p className="brand-company-wordmark">AnnChloe</p>
-          <p className="brand-company-subtitle">TOTAL BEAUTY</p>
-          <h2 id="brand-company-heading" className="brand-company-name">
-            {brand.companyName}
-          </h2>
-          <p className="brand-company-address">{brand.companyAddress}</p>
-          <a href={brand.companyTelHref} className="brand-company-tel">
-            tel {brand.companyTelLabel}
-          </a>
-          <Link href={brand.companyCtaHref} className="button brand-company-button">
-            {brand.companyCta}
-          </Link>
         </div>
       </section>
     </main>

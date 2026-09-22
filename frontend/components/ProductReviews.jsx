@@ -10,7 +10,11 @@ export default function ProductReviews({ reviews }) {
   const roundedAverage = Math.round(averageRating);
 
   return (
-    <section className="ProductReviews" aria-labelledby="reviews-heading">
+    <section
+      id="product-reviews"
+      className="ProductReviews"
+      aria-labelledby="reviews-heading"
+    >
       <div className="reviews-wrapper container">
         <h2 id="reviews-heading" className="reviews-heading">
           고객 리뷰

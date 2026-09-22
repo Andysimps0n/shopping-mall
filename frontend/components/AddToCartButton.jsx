@@ -14,7 +14,7 @@ export default function AddToCartButton({ productId }) {
   return (
     <button
       type="button"
-      className="button button--secondary product-page-cart"
+      className="button product-page-cart"
       onClick={() => addItem(productId)}
     >
       장바구니

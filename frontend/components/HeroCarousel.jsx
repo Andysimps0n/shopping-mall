@@ -284,7 +284,7 @@ export default function HeroCarousel({ products }) {
             href={`/products/${activeProduct.id}`}
             className="button hero-button"
           >
-            구매하기
+            자세히 보기
           </Link>
         </div>
       </div>
