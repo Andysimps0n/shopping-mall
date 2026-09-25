@@ -4,12 +4,25 @@ function required(name) {
   return value;
 }
 
-/** 브라우저를 카카오 로그인 화면으로 보낼 주소 */
-export function getKakaoAuthorizeUrl() {
+/**
+ * 토큰 교환이 실패하면 응답 본문 전체를 에러에 담지 않는다.
+ * 그 본문에 토큰이나 시크릿이 섞일 수 있다. 코드 이름만 로그에 남긴다.
+ */
+function failProvider(provider, response, data) {
+  const code = typeof data?.error === "string" ? data.error.slice(0, 64) : "";
+  console.error(`${provider} request failed`, { status: response.status, code });
+  const error = new Error(`${provider}_request_failed`);
+  error.code = `${provider}_request_failed`;
+  throw error;
+}
+
+/** 브라우저를 카카오 로그인 화면으로 보낼 주소. state는 로그인 CSRF를 막는다. */
+export function getKakaoAuthorizeUrl(state) {
   const params = new URLSearchParams({
     client_id: required("KAKAO_CLIENT_ID"),
     redirect_uri: required("KAKAO_REDIRECT_URI"),
     response_type: "code",
+    state,
   });
   return `https://kauth.kakao.com/oauth/authorize?${params}`;
 }
@@ -30,7 +43,7 @@ export async function exchangeKakaoCode(code) {
     body,
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data));
+  if (!res.ok) failProvider("kakao", res, data);
   return data.access_token;
 }
 
@@ -40,7 +53,7 @@ export async function fetchKakaoProfile(accessToken) {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data));
+  if (!res.ok) failProvider("kakao", res, data);
 
   const account = data.kakao_account ?? {};
   const profile = account.profile ?? {};
@@ -78,7 +91,7 @@ export async function exchangeNaverCode(code, state) {
     method: "POST",
   });
   const data = await res.json();
-  if (!res.ok || data.error) throw new Error(JSON.stringify(data));
+  if (!res.ok || data.error) failProvider("naver", res, data);
   return data.access_token;
 }
 
@@ -87,7 +100,7 @@ export async function fetchNaverProfile(accessToken) {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   const data = await res.json();
-  if (!res.ok || data.resultcode !== "00") throw new Error(JSON.stringify(data));
+  if (!res.ok || data.resultcode !== "00") failProvider("naver", res, data);
 
   const r = data.response ?? {};
   return {

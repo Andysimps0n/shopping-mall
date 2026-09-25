@@ -108,8 +108,10 @@ async function applyDecision(order, payment, browserResult) {
 
   if (decision.action === "mark_paid") {
     await prisma.$transaction(async (tx) => {
-      const updated = await tx.order.updateMany({
-        where: { id: order.id, status: { not: "PAID" } },
+      // 결제창을 연 상태(PENDING, CONFIRMING)에서 처음 PAID가 될 때만 장바구니를 비운다.
+      // 완료 요청과 웹훅이 동시에 와도 updateMany는 한 줄만 성공한다.
+      const claimed = await tx.order.updateMany({
+        where: { id: order.id, status: { in: ["PENDING", "CONFIRMING"] } },
         data: {
           status: "PAID",
           paidAt: new Date(),
@@ -117,13 +119,24 @@ async function applyDecision(order, payment, browserResult) {
         },
       });
 
-      // 같은 완료 요청과 웹훅이 겹쳐도, 처음 한 번만 장바구니를 비운다.
-      if (updated.count === 1) {
+      if (claimed.count === 1) {
         const cart = await tx.cart.findUnique({ where: { userId: order.userId } });
         if (cart) {
           await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
         }
+        return;
       }
+
+      // 실패나 취소 뒤에 늦게 도착한 PAID는 주문만 결제됨으로 남긴다.
+      // 손님이 그 사이 다시 담은 장바구니까지 지우지 않는다.
+      await tx.order.updateMany({
+        where: { id: order.id, status: { not: "PAID" } },
+        data: {
+          status: "PAID",
+          paidAt: new Date(),
+          failureMessage: null,
+        },
+      });
     });
   } else if (decision.action === "mark_failed" || decision.action === "mark_cancelled") {
     const status = decision.action === "mark_failed" ? "FAILED" : "CANCELLED";
@@ -162,7 +175,8 @@ async function applyDecision(order, payment, browserResult) {
  * paymentId로 주문을 찾고, PortOne 조회 결과와 금액이 같을 때만 PAID로 바꾼다.
  * 조회 전에 PENDING을 CONFIRMING으로 바꿔 둔다.
  * 조회가 시간 초과되거나 설정이 없어도 주문은 CONFIRMING에 남고, 웹훅이 나중에 닫는다.
- * 이미 PAID면 다시 처리하지 않는다. 장바구니도 그 첫 한 번만 비운다.
+ * 이미 PAID면 다시 처리하지 않는다.
+ * 장바구니는 PENDING 또는 CONFIRMING에서 처음 PAID가 될 때 한 번만 비운다.
  *
  * @param {string} paymentId
  * @param {{

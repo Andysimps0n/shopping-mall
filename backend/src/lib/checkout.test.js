@@ -9,6 +9,9 @@ import { capQuantity, orderNameFromItems, priceLines } from "./orderMath.js";
 import { prisma } from "../../lib/prisma.js";
 import { decidePaymentUpdate } from "./paymentDecision.js";
 import { createOrderFromCart, syncOrderPayment } from "./orderStore.js";
+import { isPaymentId } from "./paymentId.js";
+import { rateLimit } from "./rateLimit.js";
+import { normalizeProductId } from "./cartStore.js";
 import { safeNextPath } from "./safeNext.js";
 
 test("shipping fee follows the config", () => {
@@ -148,6 +151,46 @@ test("a payment is marked paid only when PortOne amount matches", () => {
   );
 });
 
+test("payment ids keep the server uuid shape", () => {
+  assert.equal(isPaymentId(`payment-${crypto.randomUUID()}`), true);
+  assert.equal(isPaymentId("payment-1"), false);
+  assert.equal(isPaymentId(`payment-${"a".repeat(80)}`), false);
+});
+
+test("product ids that are empty or very long are dropped", () => {
+  assert.equal(normalizeProductId(" silk-repair-shampoo "), "silk-repair-shampoo");
+  assert.equal(normalizeProductId(""), "");
+  assert.equal(normalizeProductId("x".repeat(81)), "");
+  assert.equal(normalizeProductId(12), "");
+});
+
+test("rate limit stops the call after the max", () => {
+  const limit = rateLimit({ windowMs: 60_000, max: 2 });
+  const req = { ip: `203.0.113.${crypto.randomInt(1, 250)}` };
+  const results = [];
+
+  for (let i = 0; i < 3; i += 1) {
+    const res = {
+      statusCode: 200,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        results.push({ statusCode: this.statusCode, body });
+      },
+    };
+    limit(req, res, () => {
+      results.push({ statusCode: 200, body: { ok: true } });
+    });
+  }
+
+  assert.equal(results[0].statusCode, 200);
+  assert.equal(results[1].statusCode, 200);
+  assert.equal(results[2].statusCode, 429);
+  assert.equal(results[2].body.error, "rate_limited");
+});
+
 test("next path stays on this site", () => {
   assert.equal(safeNextPath("/checkout"), "/checkout");
   assert.equal(safeNextPath("https://evil.example/checkout"), "");
@@ -266,6 +309,14 @@ test("cart is cleared only when a payment first becomes PAID", async () => {
       fetchPayment: async () => ({ status: "FAILED" }),
     });
     assert.equal(failed.order.status, "FAILED");
+    assert.equal(await itemCount(), 1);
+
+    // 실패로 닫힌 뒤에 늦게 PAID가 와도, 다시 담은 장바구니는 남긴다.
+    const latePaid = await syncOrderPayment(`${stamp}-failed`, {
+      source: "webhook",
+      fetchPayment: async () => paidPayment,
+    });
+    assert.equal(latePaid.order.status, "PAID");
     assert.equal(await itemCount(), 1);
 
     await makeOrder(`${stamp}-cancelled`);

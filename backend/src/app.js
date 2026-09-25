@@ -23,6 +23,7 @@ app.use(
 // verify 콜백은 express.json()이 본문을 객체로 바꾸기 전에 글자를 보관한다.
 app.use(
   express.json({
+    limit: "100kb",
     verify(req, _res, buf) {
       req.rawBody = buf.toString("utf8");
     },
@@ -40,4 +41,22 @@ app.use("/config", configRouter);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
+});
+
+// 라우트가 놓친 오류도 스택이나 시크릿을 응답에 넣지 않는다.
+app.use((err, _req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  if (err?.type === "entity.too.large") {
+    res.status(413).json({ error: "body_too_large" });
+    return;
+  }
+  if (err instanceof SyntaxError && err.status === 400) {
+    res.status(400).json({ error: "invalid_json" });
+    return;
+  }
+  console.error(err);
+  res.status(500).json({ error: "server_error" });
 });

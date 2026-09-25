@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
     const ids = idsParam
       .split(",")
       .map((id) => id.trim())
-      .filter(Boolean)
+      .filter((id) => id.length > 0 && id.length <= 80)
       .slice(0, 50);
 
     const products = await prisma.product.findMany({
@@ -38,8 +38,14 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
+    const productId = typeof req.params.id === "string" ? req.params.id : "";
+    if (productId.length === 0 || productId.length > 80) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+
     const product = await prisma.product.findFirst({
-      where: { id: req.params.id, isActive: true },
+      where: { id: productId, isActive: true },
       select: publicProduct,
     });
 

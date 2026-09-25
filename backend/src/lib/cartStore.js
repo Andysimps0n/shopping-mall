@@ -1,6 +1,23 @@
 import { prisma } from "../../lib/prisma.js";
 import { capQuantity, MAX_QUANTITY, priceLines } from "./orderMath.js";
 
+/** 상품 id는 카탈로그의 짧은 슬러그다. 아주 긴 문자열은 조회하지 않는다. */
+export const MAX_PRODUCT_ID_LENGTH = 80;
+/** 로그인 전 장바구니를 한 번에 합칠 수 있는 줄 수. */
+export const MAX_BATCH_ITEMS = 50;
+
+export function normalizeProductId(value) {
+  if (typeof value !== "string") return "";
+  const id = value.trim();
+  if (id.length === 0 || id.length > MAX_PRODUCT_ID_LENGTH) return "";
+  return id;
+}
+
+function readBatch(rawItems) {
+  if (!Array.isArray(rawItems)) return [];
+  return rawItems.slice(0, MAX_BATCH_ITEMS);
+}
+
 function presentCart(priced, rows) {
   const imageById = new Map(
     rows.map((row) => [row.product.id, row.product.imageUrl ?? null]),
@@ -158,12 +175,12 @@ export async function removeCartItem(userId, productId) {
  * @param {unknown} rawItems
  */
 export async function mergeCart(userId, rawItems) {
-  const items = Array.isArray(rawItems) ? rawItems : [];
+  const items = readBatch(rawItems);
 
   for (const entry of items) {
     if (!entry || typeof entry !== "object") continue;
-    const productId = entry.productId;
-    if (typeof productId !== "string" || productId.length === 0) continue;
+    const productId = normalizeProductId(entry.productId);
+    if (!productId) continue;
     await addQuantity(userId, productId, entry.quantity);
   }
 
@@ -182,17 +199,16 @@ export async function clearCart(userId) {
  * @param {unknown} rawItems
  */
 export async function quoteItems(rawItems) {
-  const items = Array.isArray(rawItems) ? rawItems : [];
+  const items = readBatch(rawItems);
   const wanted = [];
 
   for (const entry of items) {
     if (!entry || typeof entry !== "object") continue;
-    if (typeof entry.productId !== "string" || entry.productId.length === 0) {
-      continue;
-    }
+    const productId = normalizeProductId(entry.productId);
+    if (!productId) continue;
     const quantity = capQuantity(entry.quantity);
     if (quantity <= 0) continue;
-    wanted.push({ productId: entry.productId, quantity });
+    wanted.push({ productId, quantity });
   }
 
   if (wanted.length === 0) return presentCart(priceLines([]), []);

@@ -2,9 +2,13 @@ import { Router } from "express";
 import { Webhook } from "@portone/server-sdk";
 import { syncOrderPayment, serializeOrder } from "../lib/orderStore.js";
 import { requireUser } from "../lib/requireUser.js";
+import { isPaymentId } from "../lib/paymentId.js";
+import { rateLimit } from "../lib/rateLimit.js";
 import { prisma } from "../../lib/prisma.js";
 
 const router = Router();
+const limitComplete = rateLimit({ windowMs: 60_000, max: 20 });
+const limitWebhook = rateLimit({ windowMs: 60_000, max: 300 });
 
 function sendSyncResult(res, result) {
   if (!result.order) {
@@ -21,10 +25,10 @@ function sendSyncResult(res, result) {
 }
 
 // 결제창이 성공을 돌려줘도, 여기서 PortOne에 다시 물어본 뒤에만 PAID가 된다.
-router.post("/complete", requireUser, async (req, res) => {
+router.post("/complete", limitComplete, requireUser, async (req, res) => {
   try {
     const paymentId = req.body?.paymentId;
-    if (typeof paymentId !== "string" || paymentId.length === 0) {
+    if (!isPaymentId(paymentId)) {
       res.status(400).json({ error: "payment_required" });
       return;
     }
@@ -54,7 +58,7 @@ router.post("/complete", requireUser, async (req, res) => {
 
 // 손님이 창을 닫아도 PortOne이 이 주소로 결과를 보낸다.
 // 서명은 express.json()이 파싱하기 전의 원문(req.rawBody)으로 확인한다.
-router.post("/webhook", async (req, res) => {
+router.post("/webhook", limitWebhook, async (req, res) => {
   const secret = process.env.PORTONE_WEBHOOK_SECRET;
   if (!secret) {
     res.status(503).json({ error: "webhook_not_configured" });
@@ -84,6 +88,11 @@ router.post("/webhook", async (req, res) => {
   }
 
   try {
+    if (!isPaymentId(webhook.data.paymentId)) {
+      res.json({ ok: true, ignored: true });
+      return;
+    }
+
     const result = await syncOrderPayment(webhook.data.paymentId, {
       source: "webhook",
     });

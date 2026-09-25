@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { upsertSocialUser } from "../lib/users.js";
 import { prisma } from "../../lib/prisma.js";
+import { rateLimit } from "../lib/rateLimit.js";
 
 import crypto from "crypto";
 import {
@@ -22,8 +23,12 @@ import { isAdminUser } from "../lib/admin.js";
 
 const router = Router();
 const NEXT_COOKIE = "oauth_next";
+const STATE_COOKIE = "oauth_state";
 
-function nextCookieOptions() {
+// 로그인 시작과 콜백은 비밀번호가 없어도 남용될 수 있어서 같은 제한을 둔다.
+router.use(rateLimit({ windowMs: 60_000, max: 30 }));
+
+function oauthCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax",
@@ -33,78 +38,102 @@ function nextCookieOptions() {
   };
 }
 
+function clearOauthCookie(res, name) {
+  const options = oauthCookieOptions();
+  delete options.maxAge;
+  res.clearCookie(name, options);
+}
+
+function statesMatch(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  const given = Buffer.from(left);
+  const saved = Buffer.from(right);
+  if (given.length === 0 || given.length !== saved.length) return false;
+  return crypto.timingSafeEqual(given, saved);
+}
+
+function rememberState(res) {
+  const state = crypto.randomBytes(16).toString("hex");
+  res.cookie(STATE_COOKIE, state, oauthCookieOptions());
+  return state;
+}
+
 function rememberNextPath(req, res) {
   const next = safeNextPath(req.query.next);
   if (next) {
-    res.cookie(NEXT_COOKIE, next, nextCookieOptions());
+    res.cookie(NEXT_COOKIE, next, oauthCookieOptions());
     return;
   }
-  res.clearCookie(NEXT_COOKIE, { path: "/" });
+  clearOauthCookie(res, NEXT_COOKIE);
 }
 
 function redirectToStorefront(req, res) {
   const origin = process.env.FRONTEND_URL || "http://localhost:3000";
   const next = safeNextPath(req.cookies?.[NEXT_COOKIE]) || "/profile";
-  res.clearCookie(NEXT_COOKIE, { path: "/" });
+  clearOauthCookie(res, NEXT_COOKIE);
   res.redirect(new URL(next, origin).href);
 }
 
 // 1) 카카오 로그인 시작 → 카카오 사이트로 보냄
 router.get("/kakao", (req, res) => {
   rememberNextPath(req, res);
-  res.redirect(getKakaoAuthorizeUrl());
+  const state = rememberState(res);
+  res.redirect(getKakaoAuthorizeUrl(state));
 });
 
 // 2) 카카오가 code를 들고 여기로 돌려보냄
 router.get("/kakao/callback", async (req, res) => {
   try {
-    const { code, error } = req.query;
-    if (error) return res.status(400).json({ error });
-    if (!code) return res.status(400).json({ error: "missing code" });
+    const { code, state, error } = req.query;
+    if (error) return res.status(400).json({ error: "kakao_login_denied" });
+    if (typeof code !== "string" || code.length === 0) {
+      return res.status(400).json({ error: "missing_code" });
+    }
+    if (!statesMatch(state, req.cookies?.[STATE_COOKIE])) {
+      return res.status(400).json({ error: "invalid_state" });
+    }
 
-    const accessToken = await exchangeKakaoCode(String(code));
+    const accessToken = await exchangeKakaoCode(code);
     const profile = await fetchKakaoProfile(accessToken);
     const user = await upsertSocialUser(profile);
 
+    clearOauthCookie(res, STATE_COOKIE);
     setSessionCookie(res, user.id);
     redirectToStorefront(req, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "kakao_login_failed", detail: String(err.message) });
+    res.status(500).json({ error: "kakao_login_failed" });
   }
 });
 
 // 3) 네이버 시작 (state를 쿠키에 잠깐 저장)
 router.get("/naver", (req, res) => {
   rememberNextPath(req, res);
-  const state = crypto.randomBytes(16).toString("hex");
-  res.cookie("oauth_state", state, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 10 * 60 * 1000,
-  });
+  const state = rememberState(res);
   res.redirect(getNaverAuthorizeUrl(state));
 });
 
 router.get("/naver/callback", async (req, res) => {
   try {
     const { code, state, error } = req.query;
-    if (error) return res.status(400).json({ error });
-    if (!code || !state) return res.status(400).json({ error: "missing code/state" });
-    if (state !== req.cookies.oauth_state) {
+    if (error) return res.status(400).json({ error: "naver_login_denied" });
+    if (typeof code !== "string" || code.length === 0 || typeof state !== "string") {
+      return res.status(400).json({ error: "missing_code_or_state" });
+    }
+    if (!statesMatch(state, req.cookies?.[STATE_COOKIE])) {
       return res.status(400).json({ error: "invalid_state" });
     }
 
-    const accessToken = await exchangeNaverCode(String(code), String(state));
+    const accessToken = await exchangeNaverCode(code, state);
     const profile = await fetchNaverProfile(accessToken);
     const user = await upsertSocialUser(profile);
 
-    res.clearCookie("oauth_state");
+    clearOauthCookie(res, STATE_COOKIE);
     setSessionCookie(res, user.id);
     redirectToStorefront(req, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "naver_login_failed", detail: String(err.message) });
+    res.status(500).json({ error: "naver_login_failed" });
   }
 });
 

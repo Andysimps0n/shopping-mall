@@ -3,6 +3,7 @@ import {
   addCartItem,
   getCart,
   mergeCart,
+  normalizeProductId,
   quoteItems,
   removeCartItem,
   setCartItemQuantity,
@@ -12,8 +13,7 @@ import { requireUser } from "../lib/requireUser.js";
 const router = Router();
 
 function readProductId(value) {
-  if (typeof value !== "string") return "";
-  return value.trim();
+  return normalizeProductId(value);
 }
 
 // 로그인 전 장바구니 화면이 최신 DB 가격을 물을 때 쓴다. 저장하지 않는다.
@@ -70,9 +70,14 @@ router.post("/merge", async (req, res) => {
 
 router.patch("/items/:productId", async (req, res) => {
   try {
+    const productId = readProductId(req.params.productId);
+    if (!productId) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
     const cart = await setCartItemQuantity(
       req.userId,
-      req.params.productId,
+      productId,
       req.body?.quantity,
     );
     if (!cart) {
@@ -88,7 +93,12 @@ router.patch("/items/:productId", async (req, res) => {
 
 router.delete("/items/:productId", async (req, res) => {
   try {
-    res.json(await removeCartItem(req.userId, req.params.productId));
+    const productId = readProductId(req.params.productId);
+    if (!productId) {
+      res.json(await getCart(req.userId));
+      return;
+    }
+    res.json(await removeCartItem(req.userId, productId));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "cart_failed" });
