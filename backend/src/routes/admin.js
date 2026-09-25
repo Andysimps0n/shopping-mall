@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { isAdminUser } from "../lib/admin.js";
-import { listPaidOrdersForAdmin, serializeOrder } from "../lib/orderStore.js";
+import { listOrdersForAdmin, serializeOrder } from "../lib/orderStore.js";
 import { requireUser } from "../lib/requireUser.js";
 
 const router = Router();
@@ -30,7 +30,7 @@ router.use(requireAdmin);
 
 router.get("/orders", async (req, res) => {
   try {
-    const orders = await listPaidOrdersForAdmin();
+    const orders = await listOrdersForAdmin();
     res.json({
       orders: orders.map((order) =>
         serializeOrder(order, {

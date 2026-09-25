@@ -65,30 +65,36 @@ export default function OrderResultPage({ orderId, tone }) {
   const orderStatus = state.order?.status;
 
   useEffect(() => {
-    if (orderStatus !== "CONFIRMING") return undefined;
+    if (orderStatus !== "CONFIRMING" && orderStatus !== "PENDING") return undefined;
 
-    // PortOne을 다시 묻는 횟수는 여덟 번으로 둔다. 그 뒤에는 DB만 읽어서 웹훅 결과를 받는다.
-    const maxPortOnePolls = 8;
+    // 처음 여덟 번은 4초마다 PortOne에 묻는다.
+    // 그 뒤에도 15초마다 계속 물어, 웹훅이 없어도 만료나 결제 없음으로 화면이 끝난다.
+    const fastPolls = 8;
     let polls = 0;
     let ignore = false;
+    let timer = 0;
 
     async function tick() {
       polls += 1;
-      const result = polls <= maxPortOnePolls
-        ? await refreshOrder(orderId)
-        : await fetchOrder(orderId);
-      if (ignore || !result.order) return;
-      if (result.order.status === "PAID") {
-        clearCheckoutAddress();
+      const result = await refreshOrder(orderId);
+      if (ignore) return;
+      if (result.order) {
+        if (result.order.status === "PAID") {
+          clearCheckoutAddress();
+        }
+        setState({ status: "ready", order: result.order });
+        if (result.order.status !== "CONFIRMING" && result.order.status !== "PENDING") {
+          return;
+        }
       }
-      setState({ status: "ready", order: result.order });
+      const delay = polls < fastPolls ? 4000 : 15000;
+      timer = window.setTimeout(tick, delay);
     }
 
-    tick();
-    const timer = window.setInterval(tick, 4000);
+    timer = window.setTimeout(tick, 0);
     return () => {
       ignore = true;
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
     };
   }, [orderStatus, orderId]);
 

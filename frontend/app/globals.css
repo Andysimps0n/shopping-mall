@@ -240,6 +240,7 @@ svg {
 
 .header-session {
   display: flex;
+  max-width: 8rem;
   min-width: 4.5rem;
   min-height: 2.5rem;
   align-items: center;
@@ -250,6 +251,9 @@ svg {
   background: transparent;
   font-size: 0.8125rem;
   color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: background-color 150ms ease, color 150ms ease;
 }
 
@@ -4105,11 +4109,12 @@ svg {
 /* ---------- Checkout, orders, legal ---------- */
 
 .checkout-form {
+  --checkout-paybar-height: 12.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
   max-width: 32rem;
-  padding-bottom: 12.5rem;
+  padding-bottom: var(--checkout-paybar-height);
 }
 
 .checkout-consent {
@@ -4265,6 +4270,12 @@ svg {
 }
 
 @media (max-width: 767px) {
+  .checkout-form {
+    padding-bottom: calc(
+      var(--checkout-paybar-height) + var(--tabbar-height) + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
   .checkout-pay {
     bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
     padding: 0.75rem 1rem 0.85rem;

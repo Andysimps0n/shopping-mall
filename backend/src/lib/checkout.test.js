@@ -9,7 +9,14 @@ import { capQuantity, orderNameFromItems, priceLines } from "./orderMath.js";
 import { prisma } from "../../lib/prisma.js";
 import { decidePaymentUpdate } from "./paymentDecision.js";
 import { mergeCart } from "./cartStore.js";
-import { createOrderFromCart, isOrderStale, refreshOwnedOrder, syncOrderPayment } from "./orderStore.js";
+import {
+  createOrderFromCart,
+  isOrderStale,
+  listOrdersForAdmin,
+  refreshOwnedOrder,
+  staleOrdersToRecheck,
+  syncOrderPayment,
+} from "./orderStore.js";
 import { trustProxyFromEnv } from "./trustProxy.js";
 import { isPaymentId } from "./paymentId.js";
 import { rateLimit } from "./rateLimit.js";
@@ -366,6 +373,8 @@ test("cart is cleared only when a payment first becomes PAID", async () => {
       postalCode: "37774",
       address1: "경북 포항시 남구 대이로 45",
       payMethod: "kakaopay",
+    }, {
+      fetchPayment: async () => ({ status: "READY" }),
     });
     assert.equal(blocked.ok, false);
     assert.equal(blocked.error, "payment_confirming");
@@ -453,17 +462,33 @@ test("a mismatched or stale confirmation does not block the next checkout", asyn
 
     const mismatchId = `${stamp}-mismatch`;
     const mismatched = await makeOrder(mismatchId);
+    let cancelCalls = 0;
+    const mismatchPayment = {
+      status: "PAID",
+      currency: "KRW",
+      amount: { total: product.price - 1 },
+    };
     const mismatch = await syncOrderPayment(mismatchId, {
       source: "webhook",
-      fetchPayment: async () => ({
-        status: "PAID",
-        currency: "KRW",
-        amount: { total: product.price - 1 },
-      }),
+      fetchPayment: async () => mismatchPayment,
+      cancelPayment: async () => {
+        cancelCalls += 1;
+      },
     });
     assert.equal(mismatch.order.status, "FAILED");
     assert.equal(mismatch.error, "amount_mismatch");
+    assert.equal(mismatch.order.refundStatus, "SUCCEEDED");
+    assert.equal(cancelCalls, 1);
     assert.equal(await prisma.cartItem.count({ where: { cartId: cart.id } }), 1);
+
+    await syncOrderPayment(mismatchId, {
+      source: "webhook",
+      fetchPayment: async () => mismatchPayment,
+      cancelPayment: async () => {
+        cancelCalls += 1;
+      },
+    });
+    assert.equal(cancelCalls, 1);
 
     const next = await createOrderFromCart(user.id, shippingBody, {
       fetchPayment: async () => {
@@ -478,7 +503,9 @@ test("a mismatched or stale confirmation does not block the next checkout", asyn
       where: { id: next.order.id },
       data: { status: "CONFIRMING" },
     });
-    const blocked = await createOrderFromCart(user.id, shippingBody);
+    const blocked = await createOrderFromCart(user.id, shippingBody, {
+      fetchPayment: async () => ({ status: "READY" }),
+    });
     assert.equal(blocked.error, "payment_confirming");
     assert.equal(blocked.orderId, next.order.id);
 
@@ -493,6 +520,10 @@ test("a mismatched or stale confirmation does not block the next checkout", asyn
     assert.equal(expired.status, "FAILED");
     assert.notEqual(afterTimeout.order.id, next.order.id);
     assert.equal(await prisma.order.count({ where: { userId: user.id } }), 3);
+    await prisma.order.update({
+      where: { id: afterTimeout.order.id },
+      data: { status: "CANCELLED" },
+    });
 
     const paidSeed = await makeOrder(`${stamp}-late`);
     await syncOrderPayment(paidSeed.paymentId, {
@@ -544,6 +575,170 @@ test("a mismatched or stale confirmation does not block the next checkout", asyn
     });
     assert.equal(again.status, "FAILED");
     assert.equal(again.paymentId, missing.paymentId);
+  } finally {
+    await prisma.order.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("order list rechecks only a few stale orders", () => {
+  const now = new Date("2026-09-25T12:00:00Z");
+  const orders = [0, 1, 2, 3, 4].map((index) => ({
+    id: String(index),
+    updatedAt: new Date(now.getTime() - (30 - index) * 60 * 1000),
+  }));
+  const picked = staleOrdersToRecheck(orders, now, 3);
+  assert.deepEqual(picked.map((order) => order.id), ["0", "1", "2"]);
+
+  const fresh = { id: "fresh", updatedAt: now };
+  assert.deepEqual(staleOrdersToRecheck([fresh, orders[0]], now, 3).map((order) => order.id), ["0"]);
+});
+
+test("checkout closes an unpaid open order and a double submit stays at one open order", async () => {
+  const stamp = `open-${crypto.randomUUID()}`;
+  const user = await prisma.user.create({
+    data: { provider: "kakao", providerUserId: stamp, name: "열린주문" },
+  });
+
+  try {
+    const product = await prisma.product.findFirst({ where: { isActive: true } });
+    assert.ok(product);
+    await prisma.cart.create({
+      data: {
+        userId: user.id,
+        items: { create: { productId: product.id, quantity: 1 } },
+      },
+    });
+
+    const abandoned = await prisma.order.create({
+      data: {
+        userId: user.id,
+        status: "PENDING",
+        itemsTotal: product.price,
+        shippingFee: 0,
+        totalAmount: product.price,
+        recipientName: "김앤",
+        phone: "01012345678",
+        postalCode: "37774",
+        address1: "경북 포항시 남구 대이로 45",
+        payMethod: "kakaopay",
+        paymentId: `${stamp}-abandoned`,
+        orderName: product.name,
+        items: {
+          create: {
+            productId: product.id,
+            productName: product.name,
+            unitPrice: product.price,
+            quantity: 1,
+            lineTotal: product.price,
+          },
+        },
+      },
+    });
+
+    const notFound = async () => {
+      const error = new Error("missing");
+      error.data = { type: "PAYMENT_NOT_FOUND" };
+      throw error;
+    };
+
+    const resumed = await createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound });
+    assert.equal(resumed.ok, true);
+    assert.notEqual(resumed.order.id, abandoned.id);
+    const closed = await prisma.order.findUnique({ where: { id: abandoned.id } });
+    assert.equal(closed.status, "CANCELLED");
+
+    await prisma.order.delete({ where: { id: resumed.order.id } });
+
+    const [first, second] = await Promise.all([
+      createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound }),
+      createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound }),
+    ]);
+    const openCount = await prisma.order.count({
+      where: { userId: user.id, status: { in: ["PENDING", "CONFIRMING"] } },
+    });
+    assert.equal(openCount, 1);
+    assert.ok([first, second].some((result) => result.ok));
+  } finally {
+    await prisma.order.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("a missing payment on the result page closes after a short grace, and a failed refund is listed", async () => {
+  const stamp = `grace-${crypto.randomUUID()}`;
+  const user = await prisma.user.create({
+    data: { provider: "kakao", providerUserId: stamp, name: "유예" },
+  });
+
+  try {
+    const product = await prisma.product.findFirst({ where: { isActive: true } });
+    assert.ok(product);
+
+    async function makeOrder(paymentId) {
+      return prisma.order.create({
+        data: {
+          userId: user.id,
+          status: "CONFIRMING",
+          itemsTotal: product.price,
+          shippingFee: 0,
+          totalAmount: product.price,
+          recipientName: "김앤",
+          phone: "01012345678",
+          postalCode: "37774",
+          address1: "경북 포항시 남구 대이로 45",
+          payMethod: "kakaopay",
+          paymentId,
+          orderName: product.name,
+          items: {
+            create: {
+              productId: product.id,
+              productName: product.name,
+              unitPrice: product.price,
+              quantity: 1,
+              lineTotal: product.price,
+            },
+          },
+        },
+      });
+    }
+
+    const notFound = async () => {
+      const error = new Error("missing");
+      error.data = { type: "PAYMENT_NOT_FOUND" };
+      throw error;
+    };
+
+    const young = await makeOrder(`${stamp}-young`);
+    const stillOpen = await refreshOwnedOrder(user.id, young.id, { fetchPayment: notFound });
+    assert.equal(stillOpen.status, "CONFIRMING");
+    await prisma.order.update({ where: { id: young.id }, data: { status: "FAILED" } });
+
+    const aged = await makeOrder(`${stamp}-aged`);
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    await prisma.$executeRaw`UPDATE orders SET "createdAt" = ${twoMinutesAgo} WHERE id = ${aged.id}`;
+    const closed = await refreshOwnedOrder(user.id, aged.id, { fetchPayment: notFound });
+    assert.equal(closed.status, "CANCELLED");
+    assert.equal(closed.paymentId, aged.paymentId);
+
+    const mismatch = await makeOrder(`${stamp}-refund-fail`);
+    const failedRefund = await syncOrderPayment(mismatch.paymentId, {
+      source: "webhook",
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price - 1 },
+      }),
+      cancelPayment: async () => {
+        throw new Error("pg down");
+      },
+    });
+    assert.equal(failedRefund.order.refundStatus, "FAILED");
+    assert.equal(failedRefund.order.refundMessage, "pg down");
+
+    const listed = await listOrdersForAdmin();
+    assert.equal(listed.some((order) => order.id === failedRefund.order.id), true);
+    assert.equal(listed.some((order) => order.id === young.id), false);
   } finally {
     await prisma.order.deleteMany({ where: { userId: user.id } });
     await prisma.user.delete({ where: { id: user.id } });

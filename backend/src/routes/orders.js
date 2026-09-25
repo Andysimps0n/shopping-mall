@@ -2,7 +2,6 @@ import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import {
   createOrderFromCart,
-  getOwnedOrder,
   listOwnedOrders,
   refreshOwnedOrder,
   releaseStaleOpenOrders,
@@ -102,7 +101,8 @@ router.get("/:id", async (req, res) => {
       res.status(404).json({ error: "not_found" });
       return;
     }
-    const order = await getOwnedOrder(req.userId, orderId);
+    // 결과 화면을 다시 열어도, 오래된 확인은 여기서 닫혀 최종 상태로 간다.
+    const order = await refreshOwnedOrder(req.userId, orderId);
     if (!order) {
       res.status(404).json({ error: "not_found" });
       return;

@@ -100,15 +100,23 @@ function UserIcon({ filled = false }) {
 
 function ProfileLink() {
   const pathname = usePathname();
+  const { user, hasHydrated } = useCart();
   const isActive = pathname === "/profile";
+  const label = hasHydrated && user ? user.name?.trim() || "내 정보" : "로그인";
 
   return (
     <Link
       href="/profile"
-      className={isActive ? "header-session is-active" : "header-session"}
+      className={
+        !hasHydrated
+          ? "header-session header-session--pending"
+          : isActive
+            ? "header-session is-active"
+            : "header-session"
+      }
       aria-current={isActive ? "page" : undefined}
     >
-      로그인
+      {label}
     </Link>
   );
 }

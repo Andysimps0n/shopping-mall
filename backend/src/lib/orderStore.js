@@ -3,7 +3,12 @@ import { prisma } from "../../lib/prisma.js";
 import { parseShippingAddress } from "./address.js";
 import { capQuantity, priceLines } from "./orderMath.js";
 import { decidePaymentUpdate, rawFailureMessage } from "./paymentDecision.js";
-import { fetchPortOnePayment, isPaymentNotFound } from "./portone.js";
+import {
+  cancelPortOnePayment,
+  fetchPortOnePayment,
+  isPaymentAlreadyCancelled,
+  isPaymentNotFound,
+} from "./portone.js";
 
 export function serializeOrder(order, extras = {}) {
   return {
@@ -22,6 +27,8 @@ export function serializeOrder(order, extras = {}) {
     paymentId: order.paymentId,
     orderName: order.orderName,
     failureMessage: order.failureMessage,
+    refundStatus: order.refundStatus ?? null,
+    refundMessage: order.refundMessage ?? null,
     createdAt: order.createdAt,
     paidAt: order.paidAt,
     items: (order.items ?? []).map((item) => ({
@@ -42,6 +49,19 @@ export const DEFAULT_CONFIRM_TTL_MS = 15 * 60 * 1000;
 
 export const AMOUNT_MISMATCH_MESSAGE = "결제 금액이 주문 금액과 다릅니다.";
 export const CONFIRM_EXPIRED_MESSAGE = "결제 확인 시간이 지났습니다.";
+export const PAYMENT_NEVER_STARTED_MESSAGE = "결제를 시작하지 않아 주문을 닫았습니다.";
+export const REFUND_REASON = "주문 금액과 결제 금액이 달라 전액 취소합니다.";
+
+const OPEN_STATUSES = ["PENDING", "CONFIRMING"];
+
+/** 주문 목록에서 한 번에 다시 묻는 오래된 주문의 상한. */
+export const STALE_RECHECK_LIMIT = 3;
+
+/**
+ * 결제 건이 아직 없을 때, 결과 화면이 이 시간 뒤에도 없으면 주문을 닫는다.
+ * 결제창을 막 연 직후에는 닫지 않는다.
+ */
+export const PAYMENT_MISSING_GRACE_MS = 60 * 1000;
 
 export function confirmTtlMs() {
   const minutes = Number(process.env.ORDER_CONFIRM_TTL_MINUTES);
@@ -57,6 +77,23 @@ export function isOrderStale(order, now = new Date()) {
   const stamp = new Date(order.updatedAt ?? order.createdAt).getTime();
   const clock = now instanceof Date ? now.getTime() : new Date(now).getTime();
   return clock - stamp >= confirmTtlMs();
+}
+
+export function isPastPaymentMissingGrace(order, now = new Date()) {
+  const stamp = new Date(order.createdAt).getTime();
+  const clock = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  return clock - stamp >= PAYMENT_MISSING_GRACE_MS;
+}
+
+/**
+ * 목록 재확인에 넣을 주문만 고른다. 호출하는 쪽이 오래된 순으로 정렬해 둔다.
+ *
+ * @param {Array<{ updatedAt?: Date, createdAt?: Date }>} orders
+ * @param {Date} [now]
+ * @param {number} [limit]
+ */
+export function staleOrdersToRecheck(orders, now = new Date(), limit = STALE_RECHECK_LIMIT) {
+  return orders.filter((order) => isOrderStale(order, now)).slice(0, limit);
 }
 
 /**
@@ -88,55 +125,87 @@ export async function createOrderFromCart(userId, body, options = {}) {
     return { ok: false, status: 400, error: "cart_empty" };
   }
 
-  // 오래된 확인 중 주문은 PortOne에 다시 물은 뒤 닫는다. 닫히기 전에는 새 주문을 만들지 않는다.
-  const released = await releaseStaleOpenOrders(userId, options);
-  if (released.paidOrderId) {
+  // 기한이 남았어도 바로 PortOne에 묻는다.
+  // 결제 건이 없으면 닫고 새 주문을 만들고, 결제가 진행 중이면 그 주문으로 돌려보낸다.
+  const reconciled = await reconcileOpenOrdersForCheckout(userId, options);
+  if (reconciled.paidOrderId) {
     return {
       ok: false,
       status: 409,
       error: "already_paid",
-      orderId: released.paidOrderId,
+      orderId: reconciled.paidOrderId,
     };
   }
-
-  const open = await prisma.order.findFirst({
-    where: { userId, status: { in: ["PENDING", "CONFIRMING"] } },
-    select: { id: true },
-    orderBy: { createdAt: "desc" },
-  });
-  if (open) {
+  if (reconciled.resumeOrderId) {
     return {
       ok: false,
       status: 409,
       error: "payment_confirming",
-      orderId: open.id,
+      orderId: reconciled.resumeOrderId,
     };
   }
 
   const priced = priceLines(rows);
   const paymentId = `payment-${crypto.randomUUID()}`;
 
-  const order = await prisma.order.create({
-    data: {
-      userId,
-      status: "PENDING",
-      itemsTotal: priced.itemsTotal,
-      shippingFee: priced.shippingFee,
-      totalAmount: priced.totalAmount,
-      ...address.value,
-      paymentId,
-      orderName: priced.orderName,
-      items: {
-        create: priced.items,
-      },
+  const inserted = await insertSingleOpenOrder(userId, {
+    userId,
+    status: "PENDING",
+    itemsTotal: priced.itemsTotal,
+    shippingFee: priced.shippingFee,
+    totalAmount: priced.totalAmount,
+    ...address.value,
+    paymentId,
+    orderName: priced.orderName,
+    items: {
+      create: priced.items,
     },
-    include: orderInclude,
   });
 
-  return { ok: true, order };
+  if (inserted.open) {
+    return {
+      ok: false,
+      status: 409,
+      error: "payment_confirming",
+      orderId: inserted.open.id,
+    };
+  }
+
+  return { ok: true, order: inserted.order };
 }
 
-async function applyDecision(order, payment, browserResult) {
+/**
+ * 열린 주문을 조회한 뒤 넣는 일을 한 트랜잭션으로 묶는다.
+ * 부분 유니크 인덱스가 같은 사용자의 PENDING/CONFIRMING 두 건을 막는다.
+ * PortOne HTTP는 이 잠금 안에서 하지 않는다.
+ */
+async function insertSingleOpenOrder(userId, data) {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`open-order:${userId}`}))::text AS locked`;
+      const open = await tx.order.findFirst({
+        where: { userId, status: { in: OPEN_STATUSES } },
+        select: { id: true },
+        orderBy: { createdAt: "desc" },
+      });
+      if (open) return { open };
+
+      const order = await tx.order.create({ data, include: orderInclude });
+      return { order };
+    });
+  } catch (error) {
+    if (error?.code !== "P2002") throw error;
+    const open = await prisma.order.findFirst({
+      where: { userId, status: { in: OPEN_STATUSES } },
+      select: { id: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (open) return { open };
+    throw error;
+  }
+}
+
+async function applyDecision(order, payment, browserResult, options = {}) {
   const decision = decidePaymentUpdate(order, payment, browserResult);
 
   if (decision.action === "mark_paid") {
@@ -194,15 +263,8 @@ async function applyDecision(order, payment, browserResult) {
       paidTotal: payment?.amount?.total ?? null,
       currency: payment?.currency ?? null,
     });
-    // 금액이 다르면 PAID로 두지 않고 FAILED로 닫는다.
-    // CONFIRMING에 남겨 두면 이 사용자는 다음 결제를 영원히 못 한다.
-    await prisma.order.updateMany({
-      where: { id: order.id, status: { in: ["PENDING", "CONFIRMING"] } },
-      data: {
-        status: "FAILED",
-        failureMessage: AMOUNT_MISMATCH_MESSAGE,
-      },
-    });
+    // 금액이 다르면 PAID로 두지 않는다. 이미 잡힌 돈은 PortOne 전액 취소로 돌린다.
+    await recordAmountMismatch(order, options);
   }
 
   const fresh = await prisma.order.findUnique({
@@ -211,6 +273,53 @@ async function applyDecision(order, payment, browserResult) {
   });
 
   return { decision, order: fresh };
+}
+
+async function recordAmountMismatch(order, options) {
+  if (order.status !== "PAID") {
+    await prisma.order.updateMany({
+      where: {
+        id: order.id,
+        status: { in: ["PENDING", "CONFIRMING", "FAILED", "CANCELLED"] },
+      },
+      data: {
+        status: "FAILED",
+        failureMessage: AMOUNT_MISMATCH_MESSAGE,
+      },
+    });
+  }
+
+  const current = await prisma.order.findUnique({ where: { id: order.id } });
+  if (!current || current.status === "PAID" || current.refundStatus === "SUCCEEDED") {
+    return;
+  }
+
+  const cancel = options.cancelPayment ?? ((paymentId) => cancelPortOnePayment(paymentId, REFUND_REASON));
+  try {
+    await cancel(order.paymentId);
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { refundStatus: "SUCCEEDED", refundMessage: null },
+    });
+  } catch (error) {
+    if (isPaymentAlreadyCancelled(error)) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          refundStatus: "SUCCEEDED",
+          refundMessage: "이미 취소된 결제입니다.",
+        },
+      });
+      return;
+    }
+
+    const message = typeof error?.message === "string" ? error.message.slice(0, 300) : "환불 요청에 실패했습니다.";
+    console.error("payment refund failed", { paymentId: order.paymentId });
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { refundStatus: "FAILED", refundMessage: message },
+    });
+  }
 }
 
 /**
@@ -225,9 +334,10 @@ async function applyDecision(order, payment, browserResult) {
  * @param {{
  *   browserResult?: "cancelled" | "failed" | "returned" | null,
  *   source?: "browser" | "webhook",
- *   fetchPayment?: (paymentId: string) => Promise<unknown>
+ *   fetchPayment?: (paymentId: string) => Promise<unknown>,
+ *   cancelPayment?: (paymentId: string) => Promise<unknown>
  * }} [options]
- * fetchPayment는 테스트에서 PortOne 조회만 바꿔 끼울 때 쓴다. 요청 처리에서는 비워 둔다.
+ * fetchPayment와 cancelPayment는 테스트에서 PortOne만 바꿔 끼울 때 쓴다. 요청 처리에서는 비워 둔다.
  */
 export async function syncOrderPayment(paymentId, options = {}) {
   const browserResult = options.browserResult ?? null;
@@ -255,10 +365,13 @@ export async function syncOrderPayment(paymentId, options = {}) {
 
   const fetchPayment = options.fetchPayment ?? fetchPortOnePayment;
   let payment = null;
+  let paymentMissing = false;
   try {
     payment = await fetchPayment(paymentId);
   } catch (error) {
-    if (!isPaymentNotFound(error)) {
+    if (isPaymentNotFound(error)) {
+      paymentMissing = true;
+    } else {
       const notConfigured = error?.code === "portone_not_configured";
       // 브라우저 완료 요청은 손님에게 "확인 중"을 보여 주고 끝낸다.
       // 웹훅은 5xx를 돌려 PortOne이 다시 보내게 한다.
@@ -279,23 +392,24 @@ export async function syncOrderPayment(paymentId, options = {}) {
     }
   }
 
-  const result = await applyDecision(order, payment, browserResult);
+  const result = await applyDecision(order, payment, browserResult, options);
 
   if (result.decision.action === "reject") {
     return {
       ok: false,
       status: 409,
       error: "amount_mismatch",
+      paymentMissing,
       order: result.order,
     };
   }
 
   if (result.order.status === "PAID") {
-    return { ok: true, status: 200, order: result.order };
+    return { ok: true, status: 200, paymentMissing, order: result.order };
   }
 
   if (result.order.status === "FAILED" || result.order.status === "CANCELLED") {
-    return { ok: true, status: 200, order: result.order };
+    return { ok: true, status: 200, paymentMissing, order: result.order };
   }
 
   if (source === "webhook") {
@@ -303,6 +417,7 @@ export async function syncOrderPayment(paymentId, options = {}) {
       ok: false,
       status: 409,
       error: "not_paid",
+      paymentMissing,
       order: result.order,
     };
   }
@@ -311,56 +426,132 @@ export async function syncOrderPayment(paymentId, options = {}) {
     ok: true,
     status: 200,
     error: "confirming",
+    paymentMissing,
     order: result.order,
   };
 }
 
 async function expireOrderIfStillOpen(orderId) {
+  await closeOpenOrder(orderId, "FAILED", CONFIRM_EXPIRED_MESSAGE);
+}
+
+async function closeOpenOrder(orderId, status, failureMessage) {
   await prisma.order.updateMany({
-    where: { id: orderId, status: { in: ["PENDING", "CONFIRMING"] } },
-    data: {
-      status: "FAILED",
-      failureMessage: CONFIRM_EXPIRED_MESSAGE,
-    },
+    where: { id: orderId, status: { in: OPEN_STATUSES } },
+    data: { status, failureMessage },
   });
 }
 
+async function mapWithCap(items, limit, worker) {
+  const queue = items.slice();
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      await worker(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
 /**
- * 만료된 PENDING/CONFIRMING만 PortOne에 다시 묻고 닫는다.
- * 아직 기한 안인 주문은 건드리지 않는다. 그래야 같은 주문을 두 번 결제하지 않는다.
- * 다시 물어서 PAID가 되면 paidOrderId를 돌려주고, 호출하는 쪽이 새 주문을 만들지 않는다.
+ * 결제를 다시 시작하려는 사용자를 위해 열린 주문을 전부 확인한다.
+ * 결제 건이 없으면 바로 닫는다. 진행 중인 결제는 기한 안이면 그대로 둔다.
  *
  * @param {string} userId
- * @param {{ now?: Date, fetchPayment?: (paymentId: string) => Promise<unknown> }} [options]
+ * @param {{ now?: Date, fetchPayment?: (paymentId: string) => Promise<unknown>, cancelPayment?: (paymentId: string) => Promise<unknown> }} [options]
  */
-export async function releaseStaleOpenOrders(userId, options = {}) {
+async function reconcileOpenOrdersForCheckout(userId, options = {}) {
   const now = options.now ? new Date(options.now) : new Date();
   const openOrders = await prisma.order.findMany({
-    where: { userId, status: { in: ["PENDING", "CONFIRMING"] } },
+    where: { userId, status: { in: OPEN_STATUSES } },
     orderBy: { createdAt: "asc" },
   });
 
   let paidOrderId = null;
+  let resumeOrderId = null;
 
   for (const order of openOrders) {
-    if (!isOrderStale(order, now)) continue;
-
-    await syncOrderPayment(order.paymentId, {
-      source: "browser",
-      browserResult: "returned",
-      fetchPayment: options.fetchPayment,
-    });
-
-    const current = await prisma.order.findUnique({ where: { id: order.id } });
-    if (!current) continue;
-    if (current.status === "PAID") {
-      paidOrderId = current.id;
-      continue;
-    }
-    if (current.status === "PENDING" || current.status === "CONFIRMING") {
-      await expireOrderIfStillOpen(current.id);
-    }
+    const outcome = await reconcileOneOpenOrder(order, { ...options, now });
+    if (outcome === "paid") paidOrderId = order.id;
+    if (outcome === "open") resumeOrderId = order.id;
   }
+
+  return { paidOrderId, resumeOrderId };
+}
+
+async function reconcileOneOpenOrder(order, options) {
+  const fetchPayment = options.fetchPayment ?? fetchPortOnePayment;
+  let payment = null;
+
+  try {
+    payment = await fetchPayment(order.paymentId);
+  } catch (error) {
+    if (isPaymentNotFound(error)) {
+      await closeOpenOrder(order.id, "CANCELLED", PAYMENT_NEVER_STARTED_MESSAGE);
+      return "closed";
+    }
+    if (isOrderStale(order, options.now)) {
+      await expireOrderIfStillOpen(order.id);
+      return "closed";
+    }
+    return "open";
+  }
+
+  const result = await syncOrderPayment(order.paymentId, {
+    source: "browser",
+    browserResult: "returned",
+    fetchPayment: async () => payment,
+    cancelPayment: options.cancelPayment,
+  });
+  const status = result.order?.status;
+  if (status === "PAID") return "paid";
+  if (status === "FAILED" || status === "CANCELLED") return "closed";
+  if (isOrderStale(order, options.now)) {
+    await expireOrderIfStillOpen(order.id);
+    return "closed";
+  }
+  return "open";
+}
+
+/**
+ * 주문 목록용. 오래된 주문만, 한 번에 STALE_RECHECK_LIMIT건까지 동시에 다시 묻는다.
+ * 기한이 남은 주문은 목록을 열었다고 닫지 않는다.
+ *
+ * @param {string} userId
+ * @param {{ now?: Date, fetchPayment?: (paymentId: string) => Promise<unknown>, limit?: number }} [options]
+ */
+export async function releaseStaleOpenOrders(userId, options = {}) {
+  const now = options.now ? new Date(options.now) : new Date();
+  const limit = options.limit ?? STALE_RECHECK_LIMIT;
+  const openOrders = await prisma.order.findMany({
+    where: { userId, status: { in: OPEN_STATUSES } },
+    orderBy: { updatedAt: "asc" },
+  });
+  const stale = staleOrdersToRecheck(openOrders, now, limit);
+  let paidOrderId = null;
+
+  await mapWithCap(stale, limit, async (order) => {
+    try {
+      await syncOrderPayment(order.paymentId, {
+        source: "browser",
+        browserResult: "returned",
+        fetchPayment: options.fetchPayment,
+        cancelPayment: options.cancelPayment,
+      });
+
+      const current = await prisma.order.findUnique({ where: { id: order.id } });
+      if (!current) return;
+      if (current.status === "PAID") {
+        paidOrderId = current.id;
+        return;
+      }
+      if (current.status === "PENDING" || current.status === "CONFIRMING") {
+        await expireOrderIfStillOpen(current.id);
+      }
+    } catch {
+      console.error("stale order recheck failed", order.id);
+    }
+  });
 
   return { paidOrderId };
 }
@@ -380,16 +571,21 @@ export async function refreshOwnedOrder(userId, orderId, options = {}) {
   const now = options.now ? new Date(options.now) : new Date();
   const stale = isOrderStale(order, now);
 
-  await syncOrderPayment(order.paymentId, {
+  const synced = await syncOrderPayment(order.paymentId, {
     source: "browser",
     browserResult: "returned",
     fetchPayment: options.fetchPayment,
+    cancelPayment: options.cancelPayment,
   });
 
   const mid = await getOwnedOrder(userId, orderId);
   if (!mid) return null;
-  if (stale && (mid.status === "PENDING" || mid.status === "CONFIRMING")) {
-    await expireOrderIfStillOpen(mid.id);
+  if (mid.status === "PENDING" || mid.status === "CONFIRMING") {
+    if (stale) {
+      await expireOrderIfStillOpen(mid.id);
+    } else if (synced.paymentMissing && isPastPaymentMissingGrace(order, now)) {
+      await closeOpenOrder(mid.id, "CANCELLED", PAYMENT_NEVER_STARTED_MESSAGE);
+    }
   }
 
   return getOwnedOrder(userId, orderId);
@@ -414,9 +610,15 @@ export async function listOwnedOrders(userId) {
   });
 }
 
-export async function listPaidOrdersForAdmin() {
+export async function listOrdersForAdmin() {
   return prisma.order.findMany({
-    where: { status: "PAID" },
+    where: {
+      OR: [
+        { status: "PAID" },
+        { refundStatus: { not: null } },
+        { failureMessage: AMOUNT_MISMATCH_MESSAGE },
+      ],
+    },
     include: {
       ...orderInclude,
       user: { select: { id: true, name: true, email: true } },

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchAdminOrders } from "@/lib/checkoutApi";
 import { formatPrice } from "@/lib/products";
-import { formatOrderDate, PAY_METHOD_LABELS } from "@/lib/orderStatus";
+import { formatOrderDate, orderStatusLabel, PAY_METHOD_LABELS } from "@/lib/orderStatus";
 
 export default function AdminOrdersPage() {
   const [state, setState] = useState({ status: "loading", orders: [] });
@@ -31,7 +31,7 @@ export default function AdminOrdersPage() {
       <div className="cart-page-wrapper container">
         <h1 className="cart-page-heading">주문 목록</h1>
         <p className="cart-page-loading">
-          결제된 주문입니다. 발송은 이 화면의 받는 사람 정보로 진행합니다.
+          결제된 주문과, 금액이 달라 환불을 시도한 주문입니다. 발송은 결제 완료 주문의 받는 사람 정보로 진행합니다.
         </p>
 
         {state.status === "loading" ? (
@@ -53,7 +53,7 @@ export default function AdminOrdersPage() {
           </p>
         ) : null}
         {state.status === "ready" && state.orders.length === 0 ? (
-          <p className="cart-empty-copy">결제된 주문이 없습니다.</p>
+          <p className="cart-empty-copy">표시할 주문이 없습니다.</p>
         ) : null}
 
         <div className="order-list">
@@ -62,7 +62,17 @@ export default function AdminOrdersPage() {
             return (
               <article key={order.id} className="order-card">
                 <p className="order-date">{formatOrderDate(order.paidAt || order.createdAt)}</p>
-                <p className="order-status">{PAY_METHOD_LABELS[order.payMethod] ?? order.payMethod}</p>
+                <p className="order-status">
+                  {orderStatusLabel(order.status)}
+                  {" · "}
+                  {PAY_METHOD_LABELS[order.payMethod] ?? order.payMethod}
+                </p>
+                {order.refundStatus ? (
+                  <p className="order-pg-message">
+                    환불 {order.refundStatus === "SUCCEEDED" ? "완료" : "실패"}
+                    {order.refundMessage ? ` · ${order.refundMessage}` : ""}
+                  </p>
+                ) : null}
                 <ul className="checkout-lines">
                   {order.items.map((item) => (
                     <li key={`${order.id}-${item.productId}`}>

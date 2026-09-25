@@ -25,6 +25,21 @@ export async function fetchPortOnePayment(paymentId) {
   return getClient().getPayment({ paymentId });
 }
 
+/**
+ * 전액 취소. amount를 비우면 PortOne이 남은 금액을 모두 취소한다.
+ * 테스트는 orderStore에 cancelPayment를 넘겨 이 함수를 부르지 않는다.
+ *
+ * @param {string} paymentId
+ * @param {string} reason
+ */
+export async function cancelPortOnePayment(paymentId, reason) {
+  return getClient().cancelPayment({ paymentId, reason });
+}
+
 export function isPaymentNotFound(error) {
   return error?.data?.type === "PAYMENT_NOT_FOUND";
+}
+
+export function isPaymentAlreadyCancelled(error) {
+  return error?.data?.type === "PAYMENT_ALREADY_CANCELLED";
 }

@@ -123,11 +123,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (confirmingOrderId) {
-      setError(ORDER_ERRORS.payment_confirming);
-      return;
-    }
-
     if (!accountCart || accountCart.items.length === 0) {
       setError("장바구니가 비어 있습니다.");
       return;
@@ -165,7 +160,8 @@ export default function CheckoutPage() {
         return;
       }
       if (created.data?.error === "payment_confirming" && created.data?.orderId) {
-        setConfirmingOrderId(created.data.orderId);
+        router.push(`/orders/${created.data.orderId}/fail`);
+        return;
       }
       setError(ORDER_ERRORS[created.data?.error] || "주문을 만들지 못했습니다.");
       return;
@@ -255,12 +251,19 @@ export default function CheckoutPage() {
   }
 
   const busy = phase !== "form";
-  const payDisabled = busy || !agreed || Boolean(confirmingOrderId);
+  const payDisabled = busy || !agreed;
 
   return (
     <main className="CartPage">
       <div className="cart-page-wrapper container">
         <h1 className="cart-page-heading">주문하기</h1>
+
+        {confirmingOrderId ? (
+          <p className="checkout-error" role="status">
+            이전 결제를 확인하고 있습니다. 확인이 끝나기 전에는 같은 주문을 다시 결제하지 않습니다.{" "}
+            <Link href={`/orders/${confirmingOrderId}/fail`}>확인 상태 보기</Link>
+          </p>
+        ) : null}
 
         <form
           ref={formRef}
@@ -400,13 +403,6 @@ export default function CheckoutPage() {
               </p>
             </div>
           </details>
-
-          {confirmingOrderId ? (
-            <p className="checkout-error" role="status">
-              이전 결제를 확인하고 있습니다. 확인이 끝나기 전에는 다시 결제할 수 없습니다.{" "}
-              <Link href={`/orders/${confirmingOrderId}/fail`}>확인 상태 보기</Link>
-            </p>
-          ) : null}
 
           {error ? (
             <p className="checkout-error" role="alert">
