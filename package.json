@@ -10,7 +10,8 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run studio --workspace=backend",
     "build": "npm run build --workspace=frontend",
-    "studio": "npm run studio --workspace=backend"
+    "studio": "npm run studio --workspace=backend",
+    "test": "npm run test --workspace=backend"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

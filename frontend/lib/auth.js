@@ -83,12 +83,17 @@ export const API_BASE_URL =
  * lands on the provider login screen.
  *
  * @param {"kakao" | "naver"} provider
+ * @param {string | null | undefined} nextPath 로그인 후 돌아갈 경로. 예: /checkout
  */
-export function getSocialLoginStartUrl(provider) {
+export function getSocialLoginStartUrl(provider, nextPath) {
   if (provider !== "kakao" && provider !== "naver") {
     throw new Error(`Unsupported provider: ${provider}`);
   }
-  return `${API_BASE_URL}/auth/${provider}`;
+
+  const url = new URL(`${API_BASE_URL}/auth/${provider}`);
+  const next = safeNextPath(nextPath);
+  if (next) url.searchParams.set("next", next);
+  return url.toString();
 }
 
 /**
@@ -96,7 +101,7 @@ export function getSocialLoginStartUrl(provider) {
  * credentials: "include" is required so the browser actually sends that cookie
  * to localhost:4000 (a different origin from the Next.js app).
  *
- * @returns {Promise<{id: string, provider: string, name: string|null, email: string|null, avatarUrl: string|null}|null>}
+ * @returns {Promise<{id: string, provider: string, name: string|null, email: string|null, avatarUrl: string|null, isAdmin?: boolean}|null>}
  */
 export async function fetchCurrentUser() {
   try {
@@ -121,6 +126,25 @@ export async function logout() {
   } catch {
     // Header still treats the shopper as logged out locally.
   }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("annchloe-auth-changed"));
+  }
+}
+
+/**
+ * Path we may return to after login. The API checks this again.
+ * Only a path on this site is allowed.
+ *
+ * @param {string | null | undefined} value
+ */
+export function safeNextPath(value) {
+  if (typeof value !== "string") return "";
+  const path = value.trim();
+  if (!path.startsWith("/") || path.startsWith("//")) return "";
+  if (path.includes("\\") || path.includes("://")) return "";
+  if (path.length > 200) return "";
+  return path;
 }
 
 /**

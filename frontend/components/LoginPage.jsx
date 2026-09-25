@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   DEFAULT_ACCOUNT_TYPE,
   getLoginAccount,
@@ -72,6 +73,8 @@ function GoogleMark() {
  * Kakao and Naver send the browser to our API, which redirects to the provider.
  */
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next");
   const [accountType, setAccountType] = useState(DEFAULT_ACCOUNT_TYPE);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,7 +87,7 @@ export default function LoginPage() {
   }
 
   function handleSocialLogin(provider) {
-    window.location.assign(getSocialLoginStartUrl(provider));
+    window.location.assign(getSocialLoginStartUrl(provider, nextPath));
   }
 
   return (

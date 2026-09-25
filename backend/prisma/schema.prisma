@@ -12,6 +12,14 @@ enum AuthProvider {
   naver
 }
 
+// 결제 상태. 브라우저가 "성공"이라고 해도 PAID는 서버가 PortOne을 확인한 뒤에만 된다.
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
 model User {
   id             String       @id @default(cuid())
   provider       AuthProvider
@@ -21,13 +29,90 @@ model User {
   avatarUrl      String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  cart           Cart?
+  orders         Order[]
   @@unique([provider, providerUserId])
   @@map("users")
 }
 
+// 결제 금액의 기준. id는 frontend/lib/products.js 와 같아야 한다.
 model Product {
-  id    String @id   // e.g. "silk-repair-shampoo" (same ids as products.js)
-  price Int          // 원 단위
-  // later: name, stock, etc.
+  id        String     @id
+  name      String
+  price     Int
+  imageUrl  String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cartItems CartItem[]
   @@map("products")
+}
+
+// 로그인한 사용자와 1:1. 가격은 여기 두지 않고 Product.price 를 그때그때 읽는다.
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  status         OrderStatus @default(PENDING)
+  itemsTotal     Int
+  shippingFee    Int
+  totalAmount    Int
+  recipientName  String
+  phone          String
+  postalCode     String
+  address1       String
+  address2       String      @default("")
+  memo           String      @default("")
+  payMethod      String
+  paymentId      String      @unique
+  orderName      String
+  failureMessage String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  paidAt         DateTime?
+  items          OrderItem[]
+  @@index([userId, createdAt])
+  @@map("orders")
+}
+
+// 주문 시점의 이름과 단가 스냅샷. 이후 상품 가격이 바뀌어도 이 줄은 그대로다.
+model OrderItem {
+  id          String @id @default(cuid())
+  orderId     String
+  order       Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+  @@map("order_items")
+}
+
+// 결제 직전 로그인으로 보낸 횟수와, 로그인 후 체크아웃으로 돌아온 횟수.
+model CheckoutLoginEvent {
+  id        String   @id @default(cuid())
+  kind      String
+  createdAt DateTime @default(now())
+  @@index([kind, createdAt])
+  @@map("checkout_login_events")
 }

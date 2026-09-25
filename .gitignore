@@ -19,6 +19,7 @@ yarn-error.log*
 
 # env (never commit secrets)
 .env
+backend/.env
 .env*.local
 
 # prisma generated client

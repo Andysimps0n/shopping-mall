@@ -1,16 +1,15 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import ProductDetail from "@/components/ProductDetail";
 import {
   getProductById,
   getRecommendedProducts,
-  products,
 } from "@/lib/products";
 import { getReviewsByProductId } from "@/lib/reviews";
 
-// Pre-build one page per product so each card has a real URL.
-export function generateStaticParams() {
-  return products.map((product) => ({ id: product.id }));
-}
+// Do not prerender this page. The price comes from the API, and a static
+// build would freeze yesterday's number.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -27,6 +26,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ProductPage({ params }) {
+  await connection();
   const { id } = await params;
   const product = getProductById(id);
 

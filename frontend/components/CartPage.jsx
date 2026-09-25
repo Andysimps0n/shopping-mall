@@ -1,28 +1,43 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { useCart } from "./CartProvider";
-import {
-  CART_MAX_QUANTITY,
-  getCartLines,
-  getCartTotal,
-} from "@/lib/cart";
-import { formatPrice, getProductPhotoSrc } from "@/lib/products";
-import { usePriceMap } from "@/lib/usePrices";
+import { CART_MAX_QUANTITY } from "@/lib/cart";
+import { quoteCart } from "@/lib/cartApi";
+import { formatPrice, getProductById, getProductPhotoSrc } from "@/lib/products";
 
 /**
- * Full-page cart: line items on the left, order summary on the right.
- * Checkout (주문하기) is a visual stub only — no payment yet.
+ * Full cart. Prices come from the API.
+ * Guests get a quote. Signed-in shoppers see the database cart.
  */
 export default function CartPage() {
-  const { items, hasHydrated, setQuantity, removeItem } = useCart();
-  const prices = usePriceMap();
-  const lines = getCartLines(items, prices);
-  const total = getCartTotal(lines);
+  const { items, accountCart, mode, hasHydrated, setQuantity, removeItem } = useCart();
+  const [quote, setQuote] = useState(null);
+  const [quoteReady, setQuoteReady] = useState(false);
 
-  // Until localStorage loads, show a quiet loading shell so we do not
-  // flash the empty state when the shopper already has items saved.
+  useEffect(() => {
+    if (!hasHydrated || mode !== "guest") return;
+
+    let ignore = false;
+    setQuote(null);
+    setQuoteReady(false);
+
+    quoteCart(items).then((next) => {
+      if (ignore) return;
+      setQuote(next);
+      setQuoteReady(true);
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [items, mode, hasHydrated]);
+
+  const priced = mode === "account" ? accountCart : quote;
+  const pricesReady = mode === "account" ? accountCart != null : quoteReady;
+
   if (!hasHydrated) {
     return (
       <main className="CartPage">
@@ -34,13 +49,30 @@ export default function CartPage() {
     );
   }
 
-  if (lines.length === 0) {
+  if (mode === "guest" && quoteReady && !quote && items.length > 0) {
+    return (
+      <main className="CartPage">
+        <div className="cart-page-wrapper container">
+          <h1 className="cart-page-heading">장바구니</h1>
+          <p className="checkout-error" role="alert">
+            가격을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!priced || priced.items.length === 0) {
     return (
       <main className="CartPage">
         <div className="cart-page-wrapper container">
           <h1 className="cart-page-heading">장바구니</h1>
           <div className="cart-empty">
-            <p className="cart-empty-copy">장바구니가 비어 있습니다.</p>
+            <p className="cart-empty-copy">
+              {pricesReady || items.length === 0
+                ? "장바구니가 비어 있습니다."
+                : "장바구니를 불러오는 중…"}
+            </p>
             <Link href="/#collection" className="button cart-empty-cta">
               쇼핑 계속하기
             </Link>
@@ -50,6 +82,9 @@ export default function CartPage() {
     );
   }
 
+  const shippingLabel =
+    priced.shippingFee === 0 ? "무료" : formatPrice(priced.shippingFee);
+
   return (
     <main className="CartPage">
       <div className="cart-page-wrapper container">
@@ -57,7 +92,7 @@ export default function CartPage() {
 
         <div className="cart-page-layout">
           <ul className="cart-lines" aria-label="장바구니 상품">
-            {lines.map((line) => (
+            {priced.items.map((line) => (
               <CartLineItem
                 key={line.productId}
                 line={line}
@@ -75,27 +110,21 @@ export default function CartPage() {
             <dl className="cart-summary-rows">
               <div className="cart-summary-row">
                 <dt>상품 금액</dt>
-                <dd>{total != null ? formatPrice(total) : "가격 확인 중"}</dd>
+                <dd>{formatPrice(priced.itemsTotal)}</dd>
               </div>
               <div className="cart-summary-row">
                 <dt>배송비</dt>
-                <dd>무료</dd>
+                <dd>{shippingLabel}</dd>
               </div>
               <div className="cart-summary-row cart-summary-row--total">
                 <dt>합계</dt>
-                <dd>{total != null ? formatPrice(total) : "가격 확인 중"}</dd>
+                <dd>{formatPrice(priced.totalAmount)}</dd>
               </div>
             </dl>
 
-            {/* Checkout is not built yet — same stub pattern as 구매하기. */}
-            <button
-              type="button"
-              className="button cart-summary-checkout"
-              disabled
-              aria-disabled="true"
-            >
+            <Link href="/checkout" className="button cart-summary-checkout">
               주문하기
-            </button>
+            </Link>
           </aside>
         </div>
       </div>
@@ -104,27 +133,28 @@ export default function CartPage() {
 }
 
 function CartLineItem({ line, onSetQuantity, onRemove }) {
-  const { product, productId, quantity, unitPrice, lineTotal } = line;
-  const imageSrc = getProductPhotoSrc(product);
+  const catalog = getProductById(line.productId);
+  const imageSrc = line.imageUrl || getProductPhotoSrc(catalog);
+  const name = line.name || line.productName || catalog?.name || "상품";
 
   function decrease() {
-    onSetQuantity(productId, quantity - 1);
+    onSetQuantity(line.productId, line.quantity - 1);
   }
 
   function increase() {
-    onSetQuantity(productId, Math.min(quantity + 1, CART_MAX_QUANTITY));
+    onSetQuantity(line.productId, Math.min(line.quantity + 1, CART_MAX_QUANTITY));
   }
 
   return (
     <li className="cart-line">
       <Link
-        href={`/products/${productId}`}
+        href={`/products/${line.productId}`}
         className="cart-line-media"
-        aria-label={`${product.name} 상세 보기`}
+        aria-label={`${name} 상세 보기`}
       >
         <ProductImage
-          name={product.name}
-          categoryLabel={product.categoryLabel}
+          name={name}
+          categoryLabel={catalog?.categoryLabel}
           src={imageSrc}
           size="card"
         />
@@ -132,21 +162,17 @@ function CartLineItem({ line, onSetQuantity, onRemove }) {
 
       <div className="cart-line-body">
         <div className="cart-line-info">
-          <p className="cart-line-category">{product.categoryLabel}</p>
-          <Link href={`/products/${productId}`} className="cart-line-name">
-            {product.name}
+          {catalog?.categoryLabel ? (
+            <p className="cart-line-category">{catalog.categoryLabel}</p>
+          ) : null}
+          <Link href={`/products/${line.productId}`} className="cart-line-name">
+            {name}
           </Link>
-          <p className="cart-line-unit">
-            {unitPrice != null ? formatPrice(unitPrice) : "가격 확인 중"}
-          </p>
+          <p className="cart-line-unit">{formatPrice(line.unitPrice)}</p>
         </div>
 
         <div className="cart-line-controls">
-          <div
-            className="cart-qty"
-            role="group"
-            aria-label={`${product.name} 수량`}
-          >
+          <div className="cart-qty" role="group" aria-label={`${name} 수량`}>
             <button
               type="button"
               className="cart-qty-btn"
@@ -156,13 +182,13 @@ function CartLineItem({ line, onSetQuantity, onRemove }) {
               −
             </button>
             <span className="cart-qty-value" aria-live="polite">
-              {quantity}
+              {line.quantity}
             </span>
             <button
               type="button"
               className="cart-qty-btn"
               onClick={increase}
-              disabled={quantity >= CART_MAX_QUANTITY}
+              disabled={line.quantity >= CART_MAX_QUANTITY}
               aria-label="수량 늘리기"
             >
               +
@@ -172,15 +198,13 @@ function CartLineItem({ line, onSetQuantity, onRemove }) {
           <button
             type="button"
             className="cart-line-remove"
-            onClick={() => onRemove(productId)}
+            onClick={() => onRemove(line.productId)}
           >
             삭제
           </button>
         </div>
 
-        <p className="cart-line-total">
-          {lineTotal != null ? formatPrice(lineTotal) : "가격 확인 중"}
-        </p>
+        <p className="cart-line-total">{formatPrice(line.lineTotal)}</p>
       </div>
     </li>
   );

@@ -1,7 +1,6 @@
-// Central product catalog for the Ann Chloe storefront.
-// This is the single source of truth for both the hero carousel and the
-// product grid. Keeping the data here (instead of hard-coding it inside
-// components) makes it easy to swap in real products or a CMS later.
+// Catalog copy for the Ann Chloe storefront (name, story, photos).
+// `price` here is only the seed value copied into the database.
+// Screens must show Product.price from the API, not this number.
 
 /**
  * @typedef {"hair" | "scalp" | "skin"} ProductCategory

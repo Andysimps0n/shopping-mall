@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ProfilePage from "@/components/ProfilePage";
 
 export const metadata = {
@@ -7,5 +8,9 @@ export const metadata = {
 };
 
 export default function ProfileRoute() {
-  return <ProfilePage />;
+  return (
+    <Suspense fallback={null}>
+      <ProfilePage />
+    </Suspense>
+  );
 }

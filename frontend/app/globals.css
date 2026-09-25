@@ -4077,9 +4077,195 @@ svg {
   flex-shrink: 0;
 }
 
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-top: 1rem;
+}
+
+.footer-links a {
+  font-size: 0.8125rem;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.footer-links a:hover {
+  color: var(--color-brand);
+}
+
 @media (max-width: 640px) {
   .footer-content {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ---------- Checkout, orders, legal ---------- */
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.checkout-methods {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.checkout-method {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9375rem;
+  color: var(--color-ink);
+}
+
+.checkout-submit {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.checkout-submit:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.checkout-error {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #ff3b30;
+}
+
+.checkout-lines {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.checkout-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+}
+
+.checkout-note {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.order-result,
+.order-card {
+  max-width: 36rem;
+}
+
+.order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.order-card {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.order-status {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-brand);
+}
+
+.order-date,
+.order-address p,
+.order-pg-message {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+}
+
+.order-address {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 1rem;
+}
+
+.order-pg-message {
+  margin-bottom: 1rem;
+  white-space: pre-wrap;
+}
+
+.order-actions {
+  margin-top: 1.5rem;
+}
+
+.profile-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.profile-links a {
+  font-size: 0.875rem;
+  color: var(--color-brand);
+}
+
+.LegalPage {
+  min-height: 50vh;
+  padding-top: 2.5rem;
+  padding-bottom: 4rem;
+}
+
+.legal-wrap {
+  max-width: 42rem;
+}
+
+.legal-banner {
+  margin: 0 0 1.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 0.75rem;
+  background-color: var(--color-wash);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+}
+
+.legal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.legal-body h2 {
+  margin: 1rem 0 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.legal-body ul {
+  margin: 0;
+  padding-left: 1.1rem;
 }

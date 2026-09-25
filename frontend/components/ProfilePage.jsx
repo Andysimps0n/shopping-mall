@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import LoginPage from "./LoginPage";
 import {
   fetchCurrentUser,
   logout,
   profileCopy,
   providerLabels,
+  safeNextPath,
 } from "@/lib/auth";
 
 /**
@@ -15,6 +18,9 @@ import {
  * Session → account details, and the only logout control.
  */
 export default function ProfilePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
   const [user, setUser] = useState(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -33,6 +39,11 @@ export default function ProfilePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasLoaded || !user || !nextPath || nextPath === "/profile") return;
+    router.replace(nextPath);
+  }, [hasLoaded, user, nextPath, router]);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -99,6 +110,11 @@ export default function ProfilePage() {
                 <dd>{providerName}</dd>
               </div>
             </dl>
+          </div>
+
+          <div className="profile-links">
+            <Link href="/mypage/orders">주문 내역</Link>
+            {user.isAdmin ? <Link href="/admin/orders">주문 관리</Link> : null}
           </div>
 
           <button

@@ -2,16 +2,16 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.js";
-
-import { Router } from 'express';
-import {prisma} from '../lib/prisma.js';
-
-const router = Router();
+import productsRouter from "./routes/products.js";
+import cartRouter from "./routes/cart.js";
+import ordersRouter from "./routes/orders.js";
+import paymentsRouter from "./routes/payments.js";
+import adminRouter from "./routes/admin.js";
+import configRouter from "./routes/config.js";
 
 export const app = express();
 
-// Next.js (localhost:3000) will call this API with cookies later
-// (login session). credentials: true lets the browser send them.
+// Next.js (localhost:3000) calls this API with the session cookie.
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -19,46 +19,25 @@ app.use(
   }),
 );
 
-app.use(express.json());
+// PortOne 웹훅 서명은 파싱 전 원문이 필요하다.
+// verify 콜백은 express.json()이 본문을 객체로 바꾸기 전에 글자를 보관한다.
+app.use(
+  express.json({
+    verify(req, _res, buf) {
+      req.rawBody = buf.toString("utf8");
+    },
+  }),
+);
 app.use(cookieParser());
-app.use("/products", router)
 
 app.use("/auth", authRouter);
+app.use("/products", productsRouter);
+app.use("/cart", cartRouter);
+app.use("/orders", ordersRouter);
+app.use("/payments", paymentsRouter);
+app.use("/admin", adminRouter);
+app.use("/config", configRouter);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
-
-
-
-
-// List is registered before /:id so "products" is never treated as an id.
-router.get("/", async (req, res) => {
-  try {
-    const products = await prisma.product.findMany({
-      select: { id: true, price: true },
-    });
-    res.json({ products });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "failed reading" });
-  }
-});
-
-router.get("/:id", async (req, res) => {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
-      select: { id: true, price: true },
-    });
-    if (!product) return res.status(404).json({ error: "not_found" });
-    res.json({ product });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "failed reading" });
-  }
-});
-
-export default router
-
-

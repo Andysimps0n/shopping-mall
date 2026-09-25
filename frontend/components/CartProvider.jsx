@@ -9,6 +9,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { fetchCurrentUser } from "@/lib/auth";
+import {
+  addAccountCartItem,
+  mergeAccountCart,
+  removeAccountCartItem,
+  setAccountCartQuantity,
+} from "@/lib/cartApi";
 import {
   CART_STORAGE_KEY,
   addItem as addItemToCart,
@@ -25,47 +32,107 @@ const CartContext = createContext(null);
 /** How long the add-to-cart toast stays visible (ms). */
 const TOAST_DURATION_MS = 3200;
 
+function readLocalCart() {
+  try {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return normalizeCartItems(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalCart(items) {
+  try {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Quota or private mode — the cart still works for this session.
+  }
+}
+
+function itemsFromAccountCart(cart) {
+  return (cart?.items ?? []).map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+  }));
+}
+
 /**
- * Holds the guest cart for the whole app.
- *
- * Why we start with [] and hydrate after mount:
- * localStorage only exists in the browser. If we read it during the first
- * render, the server HTML and the client HTML can disagree (hydration error).
- * So we paint an empty cart first, then load the real one once mounted.
+ * Guest cart lives in localStorage (productId + quantity only).
+ * After login, those lines are added into the database cart and localStorage is cleared.
+ * We only clear localStorage after the merge request succeeds, so a failed request
+ * cannot throw the shopper's items away.
  */
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const [accountCart, setAccountCart] = useState(null);
+  const [mode, setMode] = useState("guest");
+  const [user, setUser] = useState(null);
   const [hasHydrated, setHasHydrated] = useState(false);
-  // Toast payload: { id, productName } or null when hidden.
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const requestSeq = useRef(0);
 
-  // Load saved cart after the first client paint.
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      setItems(normalizeCartItems(parsed));
-    } catch {
-      setItems([]);
-    } finally {
-      setHasHydrated(true);
-    }
+  const rememberAccountCart = useCallback((cart) => {
+    setAccountCart(cart);
+    setItems(itemsFromAccountCart(cart));
+    setMode("account");
   }, []);
 
-  // Persist whenever the cart changes — but only after we have loaded.
-  // Writing before hydrate would wipe a saved cart with [].
+  const syncCart = useCallback(async () => {
+    const localItems = readLocalCart();
+    const currentUser = await fetchCurrentUser();
+    setUser(currentUser);
+
+    if (!currentUser) {
+      setMode("guest");
+      setAccountCart(null);
+      setItems(localItems);
+      return;
+    }
+
+    const merged = await mergeAccountCart(localItems);
+    if (!merged) {
+      // Keep the guest copy. Checkout will ask the shopper to retry.
+      setMode("guest");
+      setAccountCart(null);
+      setItems(localItems);
+      return;
+    }
+
+    writeLocalCart([]);
+    rememberAccountCart(merged);
+  }, [rememberAccountCart]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    syncCart().finally(() => {
+      if (!ignore) setHasHydrated(true);
+    });
+
+    function onAuthChanged() {
+      syncCart();
+    }
+
+    window.addEventListener("annchloe-auth-changed", onAuthChanged);
+    return () => {
+      ignore = true;
+      window.removeEventListener("annchloe-auth-changed", onAuthChanged);
+    };
+  }, [syncCart]);
+
+  // Guest carts are the only ones written to localStorage.
+  // An account cart must not be copied back, or the next login would add it twice.
   useEffect(() => {
     if (!hasHydrated) return;
-
-    try {
-      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // Quota or private mode — cart still works for this session.
+    if (mode !== "guest") {
+      writeLocalCart([]);
+      return;
     }
-  }, [items, hasHydrated]);
+    writeLocalCart(items);
+  }, [items, hasHydrated, mode]);
 
-  // Clear any pending toast timer when the provider unmounts.
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) {
@@ -82,43 +149,75 @@ export function CartProvider({ children }) {
     setToast(null);
   }, []);
 
-  const showToast = useCallback(
-    (productName) => {
-      if (toastTimerRef.current) {
-        window.clearTimeout(toastTimerRef.current);
-      }
+  const showToast = useCallback((productName) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
 
-      // Fresh id each time so React remounts animation when adding again quickly.
-      setToast({ id: Date.now(), productName });
+    setToast({ id: Date.now(), productName });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, TOAST_DURATION_MS);
+  }, []);
 
-      toastTimerRef.current = window.setTimeout(() => {
-        setToast(null);
-        toastTimerRef.current = null;
-      }, TOAST_DURATION_MS);
+  const applyAccountChange = useCallback(
+    async (task) => {
+      const seq = requestSeq.current + 1;
+      requestSeq.current = seq;
+      const cart = await task();
+      if (seq !== requestSeq.current || !cart) return null;
+      rememberAccountCart(cart);
+      return cart;
     },
-    [],
+    [rememberAccountCart],
   );
 
   const addItem = useCallback(
     (productId) => {
-      setItems((current) => addItemToCart(current, productId));
       const product = getProductById(productId);
+
+      if (mode === "account") {
+        applyAccountChange(() => addAccountCartItem(productId)).then((cart) => {
+          if (cart) showToast(product?.name ?? null);
+        });
+        return;
+      }
+
+      setItems((current) => addItemToCart(current, productId));
       showToast(product?.name ?? null);
     },
-    [showToast],
+    [applyAccountChange, mode, showToast],
   );
 
-  const setQuantity = useCallback((productId, quantity) => {
-    setItems((current) => setItemQuantity(current, productId, quantity));
-  }, []);
+  const setQuantity = useCallback(
+    (productId, quantity) => {
+      if (mode === "account") {
+        applyAccountChange(() => setAccountCartQuantity(productId, quantity));
+        return;
+      }
+      setItems((current) => setItemQuantity(current, productId, quantity));
+    },
+    [applyAccountChange, mode],
+  );
 
-  const removeItem = useCallback((productId) => {
-    setItems((current) => removeItemFromCart(current, productId));
-  }, []);
+  const removeItem = useCallback(
+    (productId) => {
+      if (mode === "account") {
+        applyAccountChange(() => removeAccountCartItem(productId));
+        return;
+      }
+      setItems((current) => removeItemFromCart(current, productId));
+    },
+    [applyAccountChange, mode],
+  );
 
   const value = useMemo(
     () => ({
       items,
+      accountCart,
+      mode,
+      user,
       itemCount: getItemCount(items),
       hasHydrated,
       toast,
@@ -126,15 +225,20 @@ export function CartProvider({ children }) {
       setQuantity,
       removeItem,
       dismissToast,
+      reloadCart: syncCart,
     }),
     [
       items,
+      accountCart,
+      mode,
+      user,
       hasHydrated,
       toast,
       addItem,
       setQuantity,
       removeItem,
       dismissToast,
+      syncCart,
     ],
   );
 
@@ -146,10 +250,6 @@ export function CartProvider({ children }) {
   );
 }
 
-/**
- * Read the cart from the nearest CartProvider.
- * Throws if used outside the provider so missing wiring is obvious.
- */
 export function useCart() {
   const context = useContext(CartContext);
 
