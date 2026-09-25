@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { fetchCurrentUser, logout } from "@/lib/auth";
 import { useCart } from "./CartProvider";
 import { useWishlist } from "./WishlistProvider";
 
@@ -100,59 +98,13 @@ function UserIcon({ filled = false }) {
   );
 }
 
-function useSession() {
+function ProfileLink() {
   const pathname = usePathname();
-  const [user, setUser] = useState(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchCurrentUser().then((nextUser) => {
-      if (!cancelled) {
-        setUser(nextUser);
-        setHasLoaded(true);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
-
-  async function handleLogout() {
-    await logout();
-    setUser(null);
-  }
-
-  return { user, hasLoaded, handleLogout };
-}
-
-function LoginLink() {
-  const pathname = usePathname();
-  const { user, hasLoaded, handleLogout } = useSession();
-
-  if (!hasLoaded) {
-    return (
-      <span className="header-session header-session--pending" aria-hidden="true">
-        로그인
-      </span>
-    );
-  }
-
-  if (user) {
-    return (
-      <button type="button" className="header-session" onClick={handleLogout}>
-        로그아웃
-      </button>
-    );
-  }
-
-  const isActive = pathname === "/login";
+  const isActive = pathname === "/profile";
 
   return (
     <Link
-      href="/login"
+      href="/profile"
       className={isActive ? "header-session is-active" : "header-session"}
       aria-current={isActive ? "page" : undefined}
     >
@@ -245,11 +197,9 @@ function MobileTabBar() {
   const pathname = usePathname();
   const { itemCount: cartCount, hasHydrated: cartReady } = useCart();
   const { itemCount: wishCount, hasHydrated: wishReady } = useWishlist();
-  const { user, hasLoaded, handleLogout } = useSession();
-
   const cartBadge = cartReady && cartCount > 0 ? cartCount : null;
   const wishBadge = wishReady && wishCount > 0 ? wishCount : null;
-  const isLogin = pathname === "/login";
+  const isProfile = pathname === "/profile";
 
   return (
     <nav className="header-mobile" aria-label="하단 메뉴">
@@ -260,14 +210,6 @@ function MobileTabBar() {
         <BrandIcon filled={pathname === "/brand"} />
       </TabLink>
       <TabLink
-        href="/wishlist"
-        label="찜"
-        active={pathname === "/wishlist"}
-        badge={wishBadge}
-      >
-        <HeartIcon filled={pathname === "/wishlist"} />
-      </TabLink>
-      <TabLink
         href="/cart"
         label="장바구니"
         active={pathname === "/cart"}
@@ -275,25 +217,18 @@ function MobileTabBar() {
       >
         <CartIcon />
       </TabLink>
-      {!hasLoaded ? (
-        <span className="header-tab header-tab--pending" aria-hidden="true">
-          <span className="header-tab-icon">
-            <UserIcon />
-          </span>
-          <span className="header-tab-label">로그인</span>
-        </span>
-      ) : user ? (
-        <button type="button" className="header-tab" onClick={handleLogout}>
-          <span className="header-tab-icon">
-            <UserIcon />
-          </span>
-          <span className="header-tab-label">로그아웃</span>
-        </button>
-      ) : (
-        <TabLink href="/login" label="로그인" active={isLogin}>
-          <UserIcon filled={isLogin} />
-        </TabLink>
-      )}
+      <TabLink
+        href="/wishlist"
+        label="찜"
+        active={pathname === "/wishlist"}
+        badge={wishBadge}
+      >
+        <HeartIcon filled={pathname === "/wishlist"} />
+      </TabLink>
+      <TabLink href="/profile" label="프로필" active={isProfile}>
+        <UserIcon filled={isProfile} />
+      </TabLink>
+
     </nav>
   );
 }
@@ -317,9 +252,9 @@ export default function Header() {
         </nav>
 
         <div className="header-actions">
-          <LoginLink />
-          <WishlistLink />
           <CartLink />
+          <WishlistLink />
+          <ProfileLink />
         </div>
       </div>
 

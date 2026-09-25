@@ -1,8 +1,10 @@
 /**
- * Login-page copy, Kakao / Naver start URLs, and session helpers.
+ * Profile-page copy, Kakao / Naver start URLs, and session helpers.
  * Keep claims and contact details in sync with brand.js —
  * this file is the account-type labels, login-method wording,
  * the backend URL the login buttons navigate to, and /auth/me + /auth/logout.
+ * The storefront route is /profile: guests see the login form there,
+ * and a signed-in shopper logs out from that same page.
  */
 
 /** @typedef {"consumer" | "b2b"} AccountType */
@@ -36,6 +38,26 @@ export const loginAccounts = [
 ];
 
 export const DEFAULT_ACCOUNT_TYPE = "consumer";
+
+export const profileCopy = {
+  eyebrow: "PROFILE",
+  heading: "프로필",
+  lead: "로그인된 앤클로이 계정입니다.",
+  loading: "계정을 확인하고 있습니다.",
+  nameLabel: "이름",
+  emailLabel: "이메일",
+  providerLabel: "로그인",
+  missingName: "등록된 이름이 없습니다.",
+  missingEmail: "등록된 이메일이 없습니다.",
+  logout: "로그아웃",
+  loggingOut: "로그아웃 중",
+};
+
+/** Social provider id from the API → label shown on the profile page. */
+export const providerLabels = {
+  kakao: "카카오",
+  naver: "네이버",
+};
 
 export const loginCopy = {
   eyebrow: "ACCOUNT",

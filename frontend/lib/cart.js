@@ -21,7 +21,8 @@ export const CART_MAX_QUANTITY = 99;
  * @property {string} productId
  * @property {number} quantity
  * @property {import("./products").Product} product
- * @property {number} lineTotal  price * quantity
+ * @property {number | null} unitPrice  DB price, null until the API answers
+ * @property {number | null} lineTotal  unitPrice * quantity
  */
 
 /**
@@ -98,24 +99,30 @@ export function getItemCount(items) {
 }
 
 /**
- * Join cart items with live catalog data. Unknown product ids are skipped
- * so a removed catalog entry does not break the cart page.
+ * Join cart items with catalog copy (name, photo) and DB prices.
+ * Unknown product ids are skipped so a removed catalog entry
+ * does not break the cart page. Missing prices stay null.
  *
  * @param {CartItem[]} items
+ * @param {Record<string, number> | null} pricesById
  * @returns {CartLine[]}
  */
-export function getCartLines(items) {
+export function getCartLines(items, pricesById) {
   const lines = [];
 
   for (const item of items) {
     const product = getProductById(item.productId);
     if (!product) continue;
 
+    const unitPrice = pricesById?.[item.productId];
+    const hasPrice = typeof unitPrice === "number";
+
     lines.push({
       productId: item.productId,
       quantity: item.quantity,
       product,
-      lineTotal: product.price * item.quantity,
+      unitPrice: hasPrice ? unitPrice : null,
+      lineTotal: hasPrice ? unitPrice * item.quantity : null,
     });
   }
 
@@ -126,9 +133,10 @@ export function getCartLines(items) {
  * Sum of all line totals.
  *
  * @param {CartLine[]} lines
- * @returns {number}
+ * @returns {number | null} null when any line is still waiting on a price
  */
 export function getCartTotal(lines) {
+  if (lines.some((line) => line.lineTotal == null)) return null;
   return lines.reduce((sum, line) => sum + line.lineTotal, 0);
 }
 

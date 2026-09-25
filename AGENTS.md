@@ -17,7 +17,8 @@
 ## 데이터·카피 Single Source of Truth
 | 내용 | 파일 |
 |------|------|
-| 브랜드 페이지 카피·6無·철학 | `frontend/lib/brand.js` |
+| 브랜드 페이지 카피 | `frontend/components/BrandStory.jsx` (JSX에 직접 작성) |
+| 홈·푸터·로그인 등 공통 브랜드 문구·6無·회사 정보 | `frontend/lib/brand.js` |
 | 제품 카탈로그(이름·가격·이미지·스토리) | `frontend/lib/products.js` |
 | 리뷰 | `frontend/lib/reviews.js` |
 | PDP 배너 | `frontend/lib/productBanners.js` |
@@ -27,7 +28,7 @@
 | 색·타이포·레이아웃 토큰 | `design/DESIGN-apple.md` |
 | 제품 포스터(인쇄·마케팅) | `design/POSTER.md` |
 
-카피/제품명을 바꿀 때는 컴포넌트에 하드코딩하지 말고 위 lib 파일을 고치세요.
+카피/제품명을 바꿀 때는 해당 SSOT를 고치세요. 브랜드 페이지 문장은 `BrandStory.jsx`에서, 제품명은 `products.js`에서 고칩니다.
 PDF·추출본에 없는 **의료·효능 수치·보장**을 새로 만들지 마세요. (`brand.js` 주석과 동일)
 
 ## 라우트 (frontend)

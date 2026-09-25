@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { formatPrice, getHeroPhotoSrc } from "@/lib/products";
+import { usePriceMap } from "@/lib/usePrices";
 
 // Keep this in sync with the CSS transition duration on .hero-track.
 const SLIDE_MS = 550;
@@ -84,6 +85,8 @@ export default function HeroCarousel({ products }) {
 
   const activeProductIndex = productIndexFromTrack(trackIndex, total);
   const activeProduct = products[activeProductIndex];
+  const prices = usePriceMap();
+  const activePrice = activeProduct ? prices?.[activeProduct.id] : undefined;
 
   const snapToRealSlideIfNeeded = useCallback(
     (index) => {
@@ -278,7 +281,9 @@ export default function HeroCarousel({ products }) {
 
           <p className="hero-name">{activeProduct.name}</p>
 
-          <p className="hero-price">{formatPrice(activeProduct.price)}</p>
+          <p className="hero-price">
+            {activePrice != null ? formatPrice(activePrice) : "가격 확인 중"}
+          </p>
 
           <Link
             href={`/products/${activeProduct.id}`}

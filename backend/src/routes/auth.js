@@ -23,7 +23,9 @@ import {
 const router = Router();
 
 function redirectToStorefront(res) {
-  res.redirect(process.env.FRONTEND_URL || "http://localhost:3000");
+  const origin = process.env.FRONTEND_URL || "http://localhost:3000";
+  // Login finishes on the profile page, which is also where logout lives.
+  res.redirect(new URL("/profile", origin).href);
 }
 
 // 1) 카카오 로그인 시작 → 카카오 사이트로 보냄

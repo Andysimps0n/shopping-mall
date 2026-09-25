@@ -12,23 +12,15 @@ import ProductPlaceholderBanner from "./ProductPlaceholderBanner";
 import ProductReviews from "./ProductReviews";
 import { getProductBanner } from "@/lib/productBanners";
 import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/products";
+import { fetchPrice } from "@/lib/fetchPrice";
 
-/**
- * Product detail layout:
- * - Left column: product image, then tabs (제품 정보 / 전성분 / 리뷰)
- *   sitting just above the story banner-hero, then the legal table.
- * - Right column: name, story, price, buy button. Stays sticky while you scroll.
- * - Below: full ingredients, customer reviews, then four recommended product cards.
- *
- * The long banner is opt-in per product. If `getProductBanner(id)` returns
- * content, we render the editorial story. Products without an entry keep
- * the short placeholder. Both banners start collapsed so the tabs can
- * reach 제품 정보 without opening the whole story first. Each banner
- * can skip sections it has no copy for.
- */
-export default function ProductDetail({ product, recommended, reviews }) {
+
+export default async function ProductDetail({ id, product, recommended, reviews }) {
   const banner = getProductBanner(product.id);
   const imageSrc = getProductPhotoSrc(product);
+
+  const price = (await fetchPrice(id))?.price;
+  
 
   return (
     <main className="ProductPage">
@@ -86,7 +78,7 @@ export default function ProductDetail({ product, recommended, reviews }) {
               {product.name}
             </h1>
             <p className="product-page-description">{product.description}</p>
-            <p className="product-page-price">{formatPrice(product.price)}</p>
+            <p className="product-page-price">{price != null ? formatPrice(price) : "가격 확인 중"}</p>
 
             <div className="product-page-actions">
               <AddToCartButton productId={product.id} />

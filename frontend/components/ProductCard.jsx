@@ -4,10 +4,13 @@ import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { useWishlist } from "./WishlistProvider";
 import { formatPrice, getProductPhotoSrc } from "@/lib/products";
+import { usePriceMap } from "@/lib/usePrices";
 
 // A thin-line heart used for the wishlist toggle. Fills with the brand color
 // when the product is saved. The saved list lives in WishlistProvider.
 function HeartIcon({ filled }) {
+
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -39,6 +42,9 @@ function HeartIcon({ filled }) {
 export default function ProductCard({ product, compact = false }) {
   const { hasHydrated, isWishlisted, toggle } = useWishlist();
   const wishlisted = hasHydrated && isWishlisted(product.id);
+  // Client components cannot be async. The shared map loads after mount.
+  const prices = usePriceMap();
+  const price = prices?.[product.id];
 
   return (
     <article
@@ -57,7 +63,9 @@ export default function ProductCard({ product, compact = false }) {
 
         <div className="product-card-content">
           <h3 className="product-card-name">{product.name}</h3>
-          <p className="product-card-price">{formatPrice(product.price)}</p>
+          <p className="product-card-price">
+            {price != null ? formatPrice(price) : "가격 확인 중"}
+          </p>
         </div>
       </Link>
 

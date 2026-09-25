@@ -9,6 +9,7 @@ import {
   getCartTotal,
 } from "@/lib/cart";
 import { formatPrice, getProductPhotoSrc } from "@/lib/products";
+import { usePriceMap } from "@/lib/usePrices";
 
 /**
  * Full-page cart: line items on the left, order summary on the right.
@@ -16,7 +17,8 @@ import { formatPrice, getProductPhotoSrc } from "@/lib/products";
  */
 export default function CartPage() {
   const { items, hasHydrated, setQuantity, removeItem } = useCart();
-  const lines = getCartLines(items);
+  const prices = usePriceMap();
+  const lines = getCartLines(items, prices);
   const total = getCartTotal(lines);
 
   // Until localStorage loads, show a quiet loading shell so we do not
@@ -73,7 +75,7 @@ export default function CartPage() {
             <dl className="cart-summary-rows">
               <div className="cart-summary-row">
                 <dt>상품 금액</dt>
-                <dd>{formatPrice(total)}</dd>
+                <dd>{total != null ? formatPrice(total) : "가격 확인 중"}</dd>
               </div>
               <div className="cart-summary-row">
                 <dt>배송비</dt>
@@ -81,7 +83,7 @@ export default function CartPage() {
               </div>
               <div className="cart-summary-row cart-summary-row--total">
                 <dt>합계</dt>
-                <dd>{formatPrice(total)}</dd>
+                <dd>{total != null ? formatPrice(total) : "가격 확인 중"}</dd>
               </div>
             </dl>
 
@@ -102,7 +104,7 @@ export default function CartPage() {
 }
 
 function CartLineItem({ line, onSetQuantity, onRemove }) {
-  const { product, productId, quantity, lineTotal } = line;
+  const { product, productId, quantity, unitPrice, lineTotal } = line;
   const imageSrc = getProductPhotoSrc(product);
 
   function decrease() {
@@ -134,7 +136,9 @@ function CartLineItem({ line, onSetQuantity, onRemove }) {
           <Link href={`/products/${productId}`} className="cart-line-name">
             {product.name}
           </Link>
-          <p className="cart-line-unit">{formatPrice(product.price)}</p>
+          <p className="cart-line-unit">
+            {unitPrice != null ? formatPrice(unitPrice) : "가격 확인 중"}
+          </p>
         </div>
 
         <div className="cart-line-controls">
@@ -174,7 +178,9 @@ function CartLineItem({ line, onSetQuantity, onRemove }) {
           </button>
         </div>
 
-        <p className="cart-line-total">{formatPrice(lineTotal)}</p>
+        <p className="cart-line-total">
+          {lineTotal != null ? formatPrice(lineTotal) : "가격 확인 중"}
+        </p>
       </div>
     </li>
   );

@@ -39,6 +39,7 @@ export default async function ProductPage({ params }) {
 
   return (
     <ProductDetail
+      id={id}
       product={product}
       recommended={recommended}
       reviews={reviews}

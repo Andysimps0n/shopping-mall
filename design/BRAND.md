@@ -1,6 +1,6 @@
 # 앤클로이 (AnnChloe) 브랜드 가이드 — 에이전트용
 
-짧은 운영 가이드입니다. 긴 비주얼 토큰은 `DESIGN-apple.md`, 웹에 실제로 쓰는 문장은 `frontend/lib/brand.js` / `products.js`를 따릅니다.
+짧은 운영 가이드입니다. 긴 비주얼 토큰은 `DESIGN-apple.md`, 브랜드 페이지 문장은 `frontend/components/BrandStory.jsx`, 제품 카탈로그는 `frontend/lib/products.js`, 홈·푸터 등 공통 문구는 `frontend/lib/brand.js`를 따릅니다.
 
 ## 이름·표기
 - 한글: **앤클로이** (제품 UI·카피에서 "엔클로이"로 쓰지 말 것)
@@ -62,12 +62,12 @@
 
 ## 페이지별 카피 힌트
 - **홈:** 제품 `tagline`은 줄바꿈(`\n`) 가능. 히어로는 와이드 컷
-- **브랜드:** `brand.js` 섹션 순서 유지 (철학 → 6無 → 도전 → 미네랄 → 바이알 → 후기)
+- **브랜드:** `/brand` 문장은 `BrandStory.jsx`에 직접 작성. 섹션 순서 유지 (hero → statement → origin → observation → principles → ritual → family → transparency)
 - **PDP:** `story` + 배너(`productBanners.js`). 카탈로그에 없는 효능 단락 추가 금지
 
 ## 에이전트가 새 카피를 쓸 때 체크리스트
 - [ ] 표기: 앤클로이 / AnnChloe
 - [ ] 6無·순환·오일프리 철학과 충돌 없는가
 - [ ] 새 숫자/%/임상 주장 없는가
-- [ ] lib SSOT에 반영했는가 (컴포넌트 하드코딩 X)
+- [ ] lib SSOT 또는 브랜드 페이지 JSX(`BrandStory.jsx`)에 반영했는가
 - [ ] DESIGN 토큰(색·타이포)을 깨지 않는가

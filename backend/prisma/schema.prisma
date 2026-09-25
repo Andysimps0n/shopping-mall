@@ -24,3 +24,10 @@ model User {
   @@unique([provider, providerUserId])
   @@map("users")
 }
+
+model Product {
+  id    String @id   // e.g. "silk-repair-shampoo" (same ids as products.js)
+  price Int          // 원 단위
+  // later: name, stock, etc.
+  @@map("products")
+}
