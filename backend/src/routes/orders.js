@@ -4,6 +4,8 @@ import {
   createOrderFromCart,
   getOwnedOrder,
   listOwnedOrders,
+  refreshOwnedOrder,
+  releaseStaleOpenOrders,
   serializeOrder,
 } from "../lib/orderStore.js";
 import { requireUser } from "../lib/requireUser.js";
@@ -14,6 +16,7 @@ const router = Router();
 const LOGIN_KINDS = new Set(["prompted", "resumed"]);
 const limitCheckoutLogin = rateLimit({ windowMs: 60_000, max: 20 });
 const limitCreateOrder = rateLimit({ windowMs: 60_000, max: 20 });
+const limitRefresh = rateLimit({ windowMs: 60_000, max: 30 });
 
 function readOrderId(value) {
   if (typeof value !== "string") return "";
@@ -43,6 +46,7 @@ router.use(requireUser);
 
 router.get("/", async (req, res) => {
   try {
+    await releaseStaleOpenOrders(req.userId);
     const orders = await listOwnedOrders(req.userId);
     res.json({ orders: orders.map((order) => serializeOrder(order)) });
   } catch (err) {
@@ -66,6 +70,28 @@ router.post("/", limitCreateOrder, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "order_failed" });
+  }
+});
+
+// 확인 중 화면이 같은 주문을 PortOne에 다시 묻는다. 새 paymentId는 만들지 않는다.
+router.post("/:id/refresh", limitRefresh, async (req, res) => {
+  try {
+    const orderId = readOrderId(req.params.id);
+    if (!orderId) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+
+    const order = await refreshOwnedOrder(req.userId, orderId);
+    if (!order) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+
+    res.json({ order: serializeOrder(order) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "orders_failed" });
   }
 });
 

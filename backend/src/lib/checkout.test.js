@@ -8,7 +8,9 @@ import { calculateShippingFee } from "../config/shipping.js";
 import { capQuantity, orderNameFromItems, priceLines } from "./orderMath.js";
 import { prisma } from "../../lib/prisma.js";
 import { decidePaymentUpdate } from "./paymentDecision.js";
-import { createOrderFromCart, syncOrderPayment } from "./orderStore.js";
+import { mergeCart } from "./cartStore.js";
+import { createOrderFromCart, isOrderStale, refreshOwnedOrder, syncOrderPayment } from "./orderStore.js";
+import { trustProxyFromEnv } from "./trustProxy.js";
 import { isPaymentId } from "./paymentId.js";
 import { rateLimit } from "./rateLimit.js";
 import { normalizeProductId } from "./cartStore.js";
@@ -189,6 +191,21 @@ test("rate limit stops the call after the max", () => {
   assert.equal(results[1].statusCode, 200);
   assert.equal(results[2].statusCode, 429);
   assert.equal(results[2].body.error, "rate_limited");
+});
+
+test("an order is stale after the confirm window", () => {
+  const fresh = { updatedAt: new Date() };
+  const old = { updatedAt: new Date(Date.now() - 16 * 60 * 1000) };
+  assert.equal(isOrderStale(fresh), false);
+  assert.equal(isOrderStale(old), true);
+});
+
+test("trust proxy stays off unless the env asks for it", () => {
+  assert.equal(trustProxyFromEnv(""), false);
+  assert.equal(trustProxyFromEnv("0"), false);
+  assert.equal(trustProxyFromEnv("false"), false);
+  assert.equal(trustProxyFromEnv("1"), 1);
+  assert.equal(trustProxyFromEnv("true"), true);
 });
 
 test("next path stays on this site", () => {
@@ -372,6 +389,192 @@ test("cart is cleared only when a payment first becomes PAID", async () => {
   } finally {
     await prisma.order.deleteMany({ where: { userId: user.id } });
     await prisma.user.delete({ where: { id: user.id } });
-    await prisma.$disconnect();
   }
+});
+
+const shippingBody = {
+  recipientName: "김앤",
+  phone: "01012345678",
+  postalCode: "37774",
+  address1: "경북 포항시 남구 대이로 45",
+  payMethod: "kakaopay",
+};
+
+async function ageOrder(orderId) {
+  const old = new Date(Date.now() - 20 * 60 * 1000);
+  await prisma.$executeRaw`
+    UPDATE orders SET "updatedAt" = ${old} WHERE id = ${orderId}
+  `;
+}
+
+test("a mismatched or stale confirmation does not block the next checkout", async () => {
+  const stamp = `stuck-${crypto.randomUUID()}`;
+  const user = await prisma.user.create({
+    data: { provider: "kakao", providerUserId: stamp, name: "확인만료" },
+  });
+
+  try {
+    const product = await prisma.product.findFirst({ where: { isActive: true } });
+    assert.ok(product);
+    const cart = await prisma.cart.create({
+      data: {
+        userId: user.id,
+        items: { create: { productId: product.id, quantity: 1 } },
+      },
+    });
+
+    async function makeOrder(paymentId, status = "PENDING") {
+      return prisma.order.create({
+        data: {
+          userId: user.id,
+          status,
+          itemsTotal: product.price,
+          shippingFee: 0,
+          totalAmount: product.price,
+          recipientName: "김앤",
+          phone: "01012345678",
+          postalCode: "37774",
+          address1: "경북 포항시 남구 대이로 45",
+          payMethod: "kakaopay",
+          paymentId,
+          orderName: product.name,
+          items: {
+            create: {
+              productId: product.id,
+              productName: product.name,
+              unitPrice: product.price,
+              quantity: 1,
+              lineTotal: product.price,
+            },
+          },
+        },
+      });
+    }
+
+    const mismatchId = `${stamp}-mismatch`;
+    const mismatched = await makeOrder(mismatchId);
+    const mismatch = await syncOrderPayment(mismatchId, {
+      source: "webhook",
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price - 1 },
+      }),
+    });
+    assert.equal(mismatch.order.status, "FAILED");
+    assert.equal(mismatch.error, "amount_mismatch");
+    assert.equal(await prisma.cartItem.count({ where: { cartId: cart.id } }), 1);
+
+    const next = await createOrderFromCart(user.id, shippingBody, {
+      fetchPayment: async () => {
+        throw new Error("should not look up a fresh cart");
+      },
+    });
+    assert.equal(next.ok, true);
+    assert.notEqual(next.order.paymentId, mismatched.paymentId);
+    assert.equal(await prisma.order.count({ where: { userId: user.id, status: "PAID" } }), 0);
+
+    await prisma.order.update({
+      where: { id: next.order.id },
+      data: { status: "CONFIRMING" },
+    });
+    const blocked = await createOrderFromCart(user.id, shippingBody);
+    assert.equal(blocked.error, "payment_confirming");
+    assert.equal(blocked.orderId, next.order.id);
+
+    await ageOrder(next.order.id);
+    const afterTimeout = await createOrderFromCart(user.id, shippingBody, {
+      fetchPayment: async () => {
+        throw new Error("timeout");
+      },
+    });
+    assert.equal(afterTimeout.ok, true);
+    const expired = await prisma.order.findUnique({ where: { id: next.order.id } });
+    assert.equal(expired.status, "FAILED");
+    assert.notEqual(afterTimeout.order.id, next.order.id);
+    assert.equal(await prisma.order.count({ where: { userId: user.id } }), 3);
+
+    const paidSeed = await makeOrder(`${stamp}-late`);
+    await syncOrderPayment(paidSeed.paymentId, {
+      browserResult: "returned",
+      fetchPayment: async () => {
+        throw new Error("timeout");
+      },
+    });
+    await ageOrder(paidSeed.id);
+    const orderCountBefore = await prisma.order.count({ where: { userId: user.id } });
+    const paidLate = await createOrderFromCart(user.id, shippingBody, {
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price },
+      }),
+    });
+    assert.equal(paidLate.error, "already_paid");
+    assert.equal(paidLate.orderId, paidSeed.id);
+    assert.equal(await prisma.order.count({ where: { userId: user.id } }), orderCountBefore);
+    assert.equal(await prisma.cartItem.count({ where: { cartId: cart.id } }), 0);
+
+    await prisma.cartItem.create({
+      data: { cartId: cart.id, productId: product.id, quantity: 1 },
+    });
+    const missing = await makeOrder(`${stamp}-missing`);
+    await syncOrderPayment(missing.paymentId, {
+      browserResult: "returned",
+      fetchPayment: async () => {
+        const error = new Error("missing");
+        error.data = { type: "PAYMENT_NOT_FOUND" };
+        throw error;
+      },
+    });
+    await ageOrder(missing.id);
+    const refreshed = await refreshOwnedOrder(user.id, missing.id, {
+      fetchPayment: async () => {
+        const error = new Error("missing");
+        error.data = { type: "PAYMENT_NOT_FOUND" };
+        throw error;
+      },
+    });
+    assert.equal(refreshed.status, "FAILED");
+    assert.equal(refreshed.paymentId, missing.paymentId);
+    const again = await refreshOwnedOrder(user.id, missing.id, {
+      fetchPayment: async () => {
+        throw new Error("must not create another payment");
+      },
+    });
+    assert.equal(again.status, "FAILED");
+    assert.equal(again.paymentId, missing.paymentId);
+  } finally {
+    await prisma.order.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("merging the same cart twice does not double the quantity", async () => {
+  const stamp = `merge-${crypto.randomUUID()}`;
+  const user = await prisma.user.create({
+    data: { provider: "kakao", providerUserId: stamp, name: "병합" },
+  });
+
+  try {
+    const product = await prisma.product.findFirst({ where: { isActive: true } });
+    assert.ok(product);
+
+    const first = await mergeCart(user.id, [{ productId: product.id, quantity: 2 }]);
+    const second = await mergeCart(user.id, [{ productId: product.id, quantity: 2 }]);
+    assert.equal(first.items[0].quantity, 2);
+    assert.equal(second.items[0].quantity, 2);
+
+    const smaller = await mergeCart(user.id, [{ productId: product.id, quantity: 1 }]);
+    assert.equal(smaller.items[0].quantity, 2);
+
+    const larger = await mergeCart(user.id, [{ productId: product.id, quantity: 4 }]);
+    assert.equal(larger.items[0].quantity, 4);
+  } finally {
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test.after(async () => {
+  await prisma.$disconnect();
 });

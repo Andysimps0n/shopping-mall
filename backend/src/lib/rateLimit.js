@@ -1,7 +1,7 @@
 /**
  * 한 프로세스 안의 IP별 요청 제한.
  * 제한기마다 통을 따로 둔다. 로그인 횟수가 결제 횟수와 섞이지 않게.
- * X-Forwarded-For는 믿지 않는다. trust proxy를 켜면 가짜 IP로 제한을 피할 수 있다.
+ * req.ip를 쓴다. TRUST_PROXY가 꺼져 있으면 소켓 주소이고, 켜져 있으면 Express가 신뢰하는 홉까지만 헤더를 본다.
  *
  * @param {{ windowMs: number, max: number }} options
  */

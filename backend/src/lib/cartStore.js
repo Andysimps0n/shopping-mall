@@ -168,8 +168,39 @@ export async function removeCartItem(userId, productId) {
 }
 
 /**
- * 로그인 전 localStorage 장바구니를 DB 장바구니에 더한다.
- * 없는 상품, 숨긴 상품은 건너뛴다. 같은 상품은 수량을 더하고 99를 넘기지 않는다.
+ * 같은 상품의 수량을 incoming과 이미 담긴 수량 중 큰 값으로 맞춘다.
+ * 더하기가 아니다. 로그인 직후 병합 요청이 한 번 더 가도 수량이 두 배가 되지 않는다.
+ */
+async function raiseQuantityTo(userId, productId, quantity) {
+  const incoming = capQuantity(quantity);
+  if (incoming <= 0) return;
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, isActive: true },
+  });
+  if (!product) return;
+
+  const cart = await ensureCart(userId);
+  const existing = await prisma.cartItem.findUnique({
+    where: { cartId_productId: { cartId: cart.id, productId } },
+  });
+  const next = Math.max(existing?.quantity ?? 0, incoming);
+
+  await prisma.cartItem.upsert({
+    where: { cartId_productId: { cartId: cart.id, productId } },
+    create: {
+      cartId: cart.id,
+      productId,
+      quantity: next,
+    },
+    update: { quantity: next },
+  });
+}
+
+/**
+ * 로그인 전 localStorage 장바구니를 DB 장바구니에 맞춘다.
+ * 없는 상품, 숨긴 상품은 건너뛴다.
+ * 같은 상품은 더하지 않고, 둘 중 큰 수량만 남긴다.
  *
  * @param {string} userId
  * @param {unknown} rawItems
@@ -181,7 +212,7 @@ export async function mergeCart(userId, rawItems) {
     if (!entry || typeof entry !== "object") continue;
     const productId = normalizeProductId(entry.productId);
     if (!productId) continue;
-    await addQuantity(userId, productId, entry.quantity);
+    await raiseQuantityTo(userId, productId, entry.quantity);
   }
 
   return getCart(userId);

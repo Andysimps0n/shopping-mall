@@ -103,7 +103,7 @@ router.post("/webhook", limitWebhook, async (req, res) => {
       return;
     }
 
-    // 금액이 다르면 주문을 바꾸지 않았다. 재시도로 고쳐지지 않으므로 200으로 남긴다.
+    // 금액이 다르면 주문은 FAILED로 닫혔다. 재시도로 금액이 고쳐지지 않으므로 200으로 남긴다.
     if (result.error === "amount_mismatch") {
       res.json({ ok: true, ignored: true });
       return;

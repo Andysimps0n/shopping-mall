@@ -40,7 +40,7 @@ PDF·추출본에 없는 **의료·효능 수치·보장**을 새로 만들지 �
 ## 기술 스택
 - Frontend: Next.js 15, React 19, App Router, JS/JSX (TypeScript 아님)
 - Backend: Prisma 7, PostgreSQL, `@prisma/adapter-pg`
-- 워크스페이스 스크립트(루트 `package.json`): `npm run dev` → frontend, `npm run studio` → Prisma Studio
+- 워크스페이스 스크립트(루트 `package.json`): `npm run dev` → frontend, `npm run dev:backend` → API 서버, `npm run studio` → Prisma Studio
 
 ## 에이전트 작업 방식
 1. 이 파일 + `design/BRAND.md` 를 먼저 읽기 (필요 시 `DESIGN-apple.md`의 colors/typography만)

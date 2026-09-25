@@ -37,11 +37,33 @@ export function serializeOrder(order, extras = {}) {
 
 const orderInclude = { items: { orderBy: { id: "asc" } } };
 
+/** 확인이 이 시간보다 오래되면 PortOne에 다시 묻고, 그래도 안 끝나면 주문을 닫는다. */
+export const DEFAULT_CONFIRM_TTL_MS = 15 * 60 * 1000;
+
+export const AMOUNT_MISMATCH_MESSAGE = "결제 금액이 주문 금액과 다릅니다.";
+export const CONFIRM_EXPIRED_MESSAGE = "결제 확인 시간이 지났습니다.";
+
+export function confirmTtlMs() {
+  const minutes = Number(process.env.ORDER_CONFIRM_TTL_MINUTES);
+  if (!Number.isFinite(minutes) || minutes <= 0) return DEFAULT_CONFIRM_TTL_MS;
+  return minutes * 60 * 1000;
+}
+
+/**
+ * 결제창을 연 뒤 너무 오래 답이 없는 주문.
+ * updatedAt은 CONFIRMING으로 바뀐 시각에 갱신된다.
+ */
+export function isOrderStale(order, now = new Date()) {
+  const stamp = new Date(order.updatedAt ?? order.createdAt).getTime();
+  const clock = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  return clock - stamp >= confirmTtlMs();
+}
+
 /**
  * 세션 사용자의 DB 장바구니로 주문을 만든다.
  * body 안의 금액은 읽지 않는다.
  */
-export async function createOrderFromCart(userId, body) {
+export async function createOrderFromCart(userId, body, options = {}) {
   const address = parseShippingAddress(body);
   if (!address.ok) {
     return { ok: false, status: 400, error: address.error };
@@ -66,17 +88,28 @@ export async function createOrderFromCart(userId, body) {
     return { ok: false, status: 400, error: "cart_empty" };
   }
 
-  // 확인이 끝나기 전에 새 주문을 만들면 같은 장바구니로 두 번 결제될 수 있다.
-  const confirming = await prisma.order.findFirst({
-    where: { userId, status: "CONFIRMING" },
+  // 오래된 확인 중 주문은 PortOne에 다시 물은 뒤 닫는다. 닫히기 전에는 새 주문을 만들지 않는다.
+  const released = await releaseStaleOpenOrders(userId, options);
+  if (released.paidOrderId) {
+    return {
+      ok: false,
+      status: 409,
+      error: "already_paid",
+      orderId: released.paidOrderId,
+    };
+  }
+
+  const open = await prisma.order.findFirst({
+    where: { userId, status: { in: ["PENDING", "CONFIRMING"] } },
     select: { id: true },
+    orderBy: { createdAt: "desc" },
   });
-  if (confirming) {
+  if (open) {
     return {
       ok: false,
       status: 409,
       error: "payment_confirming",
-      orderId: confirming.id,
+      orderId: open.id,
     };
   }
 
@@ -161,6 +194,15 @@ async function applyDecision(order, payment, browserResult) {
       paidTotal: payment?.amount?.total ?? null,
       currency: payment?.currency ?? null,
     });
+    // 금액이 다르면 PAID로 두지 않고 FAILED로 닫는다.
+    // CONFIRMING에 남겨 두면 이 사용자는 다음 결제를 영원히 못 한다.
+    await prisma.order.updateMany({
+      where: { id: order.id, status: { in: ["PENDING", "CONFIRMING"] } },
+      data: {
+        status: "FAILED",
+        failureMessage: AMOUNT_MISMATCH_MESSAGE,
+      },
+    });
   }
 
   const fresh = await prisma.order.findUnique({
@@ -174,7 +216,8 @@ async function applyDecision(order, payment, browserResult) {
 /**
  * paymentId로 주문을 찾고, PortOne 조회 결과와 금액이 같을 때만 PAID로 바꾼다.
  * 조회 전에 PENDING을 CONFIRMING으로 바꿔 둔다.
- * 조회가 시간 초과되거나 설정이 없어도 주문은 CONFIRMING에 남고, 웹훅이 나중에 닫는다.
+ * 조회가 시간 초과되거나 설정이 없어도, 만료 전에는 CONFIRMING에 남고 웹훅이 나중에 닫을 수 있다.
+ * 만료 시각이 지난 뒤에 다시 물어도 결제가 아니면 FAILED로 닫아 다음 결제를 막지 않는다.
  * 이미 PAID면 다시 처리하지 않는다.
  * 장바구니는 PENDING 또는 CONFIRMING에서 처음 PAID가 될 때 한 번만 비운다.
  *
@@ -270,6 +313,86 @@ export async function syncOrderPayment(paymentId, options = {}) {
     error: "confirming",
     order: result.order,
   };
+}
+
+async function expireOrderIfStillOpen(orderId) {
+  await prisma.order.updateMany({
+    where: { id: orderId, status: { in: ["PENDING", "CONFIRMING"] } },
+    data: {
+      status: "FAILED",
+      failureMessage: CONFIRM_EXPIRED_MESSAGE,
+    },
+  });
+}
+
+/**
+ * 만료된 PENDING/CONFIRMING만 PortOne에 다시 묻고 닫는다.
+ * 아직 기한 안인 주문은 건드리지 않는다. 그래야 같은 주문을 두 번 결제하지 않는다.
+ * 다시 물어서 PAID가 되면 paidOrderId를 돌려주고, 호출하는 쪽이 새 주문을 만들지 않는다.
+ *
+ * @param {string} userId
+ * @param {{ now?: Date, fetchPayment?: (paymentId: string) => Promise<unknown> }} [options]
+ */
+export async function releaseStaleOpenOrders(userId, options = {}) {
+  const now = options.now ? new Date(options.now) : new Date();
+  const openOrders = await prisma.order.findMany({
+    where: { userId, status: { in: ["PENDING", "CONFIRMING"] } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  let paidOrderId = null;
+
+  for (const order of openOrders) {
+    if (!isOrderStale(order, now)) continue;
+
+    await syncOrderPayment(order.paymentId, {
+      source: "browser",
+      browserResult: "returned",
+      fetchPayment: options.fetchPayment,
+    });
+
+    const current = await prisma.order.findUnique({ where: { id: order.id } });
+    if (!current) continue;
+    if (current.status === "PAID") {
+      paidOrderId = current.id;
+      continue;
+    }
+    if (current.status === "PENDING" || current.status === "CONFIRMING") {
+      await expireOrderIfStillOpen(current.id);
+    }
+  }
+
+  return { paidOrderId };
+}
+
+/**
+ * 확인 중 화면이 주기적으로 부른다. 같은 paymentId만 다시 조회한다.
+ * 새 주문을 만들지 않으므로 같은 주문을 두 번 결제하지 않는다.
+ * 기한이 지났는데도 결제가 아니면 FAILED로 닫는다.
+ */
+export async function refreshOwnedOrder(userId, orderId, options = {}) {
+  const order = await getOwnedOrder(userId, orderId);
+  if (!order) return null;
+  if (order.status !== "PENDING" && order.status !== "CONFIRMING") {
+    return order;
+  }
+
+  const now = options.now ? new Date(options.now) : new Date();
+  const stale = isOrderStale(order, now);
+
+  await syncOrderPayment(order.paymentId, {
+    source: "browser",
+    browserResult: "returned",
+    fetchPayment: options.fetchPayment,
+  });
+
+  const mid = await getOwnedOrder(userId, orderId);
+  if (!mid) return null;
+  if (stale && (mid.status === "PENDING" || mid.status === "CONFIRMING")) {
+    await expireOrderIfStillOpen(mid.id);
+  }
+
+  return getOwnedOrder(userId, orderId);
 }
 
 export async function getOwnedOrder(userId, orderId) {

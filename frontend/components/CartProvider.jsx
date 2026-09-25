@@ -59,7 +59,8 @@ function itemsFromAccountCart(cart) {
 
 /**
  * Guest cart lives in localStorage (productId + quantity only).
- * After login, those lines are added into the database cart and localStorage is cleared.
+ * After login, each line becomes the larger of the guest quantity and the account quantity.
+ * A retried merge does not add the same units again. localStorage is cleared after success.
  * We only clear localStorage after the merge request succeeds, so a failed request
  * cannot throw the shopper's items away.
  */

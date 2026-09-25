@@ -67,6 +67,11 @@ function rememberNextPath(req, res) {
   clearOauthCookie(res, NEXT_COOKIE);
 }
 
+function failOauth(res, status, error) {
+  clearOauthCookie(res, STATE_COOKIE);
+  res.status(status).json({ error });
+}
+
 function redirectToStorefront(req, res) {
   const origin = process.env.FRONTEND_URL || "http://localhost:3000";
   const next = safeNextPath(req.cookies?.[NEXT_COOKIE]) || "/profile";
@@ -85,12 +90,12 @@ router.get("/kakao", (req, res) => {
 router.get("/kakao/callback", async (req, res) => {
   try {
     const { code, state, error } = req.query;
-    if (error) return res.status(400).json({ error: "kakao_login_denied" });
+    if (error) return failOauth(res, 400, "kakao_login_denied");
     if (typeof code !== "string" || code.length === 0) {
-      return res.status(400).json({ error: "missing_code" });
+      return failOauth(res, 400, "missing_code");
     }
     if (!statesMatch(state, req.cookies?.[STATE_COOKIE])) {
-      return res.status(400).json({ error: "invalid_state" });
+      return failOauth(res, 400, "invalid_state");
     }
 
     const accessToken = await exchangeKakaoCode(code);
@@ -102,7 +107,7 @@ router.get("/kakao/callback", async (req, res) => {
     redirectToStorefront(req, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "kakao_login_failed" });
+    failOauth(res, 500, "kakao_login_failed");
   }
 });
 
@@ -116,12 +121,12 @@ router.get("/naver", (req, res) => {
 router.get("/naver/callback", async (req, res) => {
   try {
     const { code, state, error } = req.query;
-    if (error) return res.status(400).json({ error: "naver_login_denied" });
+    if (error) return failOauth(res, 400, "naver_login_denied");
     if (typeof code !== "string" || code.length === 0 || typeof state !== "string") {
-      return res.status(400).json({ error: "missing_code_or_state" });
+      return failOauth(res, 400, "missing_code_or_state");
     }
     if (!statesMatch(state, req.cookies?.[STATE_COOKIE])) {
-      return res.status(400).json({ error: "invalid_state" });
+      return failOauth(res, 400, "invalid_state");
     }
 
     const accessToken = await exchangeNaverCode(code, state);
@@ -133,7 +138,7 @@ router.get("/naver/callback", async (req, res) => {
     redirectToStorefront(req, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "naver_login_failed" });
+    failOauth(res, 500, "naver_login_failed");
   }
 });
 

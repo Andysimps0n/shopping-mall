@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { fetchOrder } from "@/lib/checkoutApi";
+import { fetchOrder, refreshOrder } from "@/lib/checkoutApi";
 import { clearCheckoutAddress } from "@/lib/checkoutDraft";
 import { formatPrice } from "@/lib/products";
 import { formatOrderDate, orderStatusLabel, PAY_METHOD_LABELS } from "@/lib/orderStatus";
@@ -23,7 +23,7 @@ const RESULT_COPY = {
   },
   CONFIRMING: {
     title: "결제를 확인하고 있습니다",
-    body: "결제 결과를 확인하는 동안에는 다시 결제할 수 없습니다. 확인이 끝나면 이 화면이 바뀝니다.",
+    body: "같은 주문은 확인이 끝날 때까지 다시 결제하지 않습니다. 확인이 끝나면 이 화면이 바뀝니다.",
   },
   PENDING: {
     title: "결제 대기",
@@ -67,17 +67,29 @@ export default function OrderResultPage({ orderId, tone }) {
   useEffect(() => {
     if (orderStatus !== "CONFIRMING") return undefined;
 
-    const timer = window.setInterval(() => {
-      fetchOrder(orderId).then((result) => {
-        if (!result.order) return;
-        if (result.order.status === "PAID") {
-          clearCheckoutAddress();
-        }
-        setState({ status: "ready", order: result.order });
-      });
-    }, 4000);
+    // PortOne을 다시 묻는 횟수는 여덟 번으로 둔다. 그 뒤에는 DB만 읽어서 웹훅 결과를 받는다.
+    const maxPortOnePolls = 8;
+    let polls = 0;
+    let ignore = false;
 
-    return () => window.clearInterval(timer);
+    async function tick() {
+      polls += 1;
+      const result = polls <= maxPortOnePolls
+        ? await refreshOrder(orderId)
+        : await fetchOrder(orderId);
+      if (ignore || !result.order) return;
+      if (result.order.status === "PAID") {
+        clearCheckoutAddress();
+      }
+      setState({ status: "ready", order: result.order });
+    }
+
+    tick();
+    const timer = window.setInterval(tick, 4000);
+    return () => {
+      ignore = true;
+      window.clearInterval(timer);
+    };
   }, [orderStatus, orderId]);
 
   if (state.status === "loading") {

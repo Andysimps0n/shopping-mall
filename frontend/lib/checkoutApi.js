@@ -67,6 +67,26 @@ export async function finishBrowserPayment({ paymentId, code, message, pgMessage
   return `/orders/${orderId}/fail${suffix}`;
 }
 
+/**
+ * 확인 중 화면이 부른다. 서버가 같은 paymentId로 PortOne을 다시 조회한다.
+ * 기한이 지났는데 결제가 아니면 주문을 FAILED로 닫는다.
+ */
+export async function refreshOrder(orderId) {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/orders/${encodeURIComponent(orderId)}/refresh`,
+      { method: "POST", credentials: "include" },
+    );
+    if (response.status === 401) return { error: "login" };
+    if (response.status === 404) return { error: "missing" };
+    if (!response.ok) return { error: "failed" };
+    const data = await readJson(response);
+    return { order: data?.order ?? null };
+  } catch {
+    return { error: "failed" };
+  }
+}
+
 export async function fetchOrder(orderId) {
   try {
     const response = await fetch(

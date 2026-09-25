@@ -8,8 +8,13 @@ import ordersRouter from "./routes/orders.js";
 import paymentsRouter from "./routes/payments.js";
 import adminRouter from "./routes/admin.js";
 import configRouter from "./routes/config.js";
+import { trustProxyFromEnv } from "./lib/trustProxy.js";
 
 export const app = express();
+
+// 기본은 끈다. 배포에서 프록시가 하나면 TRUST_PROXY=1.
+// 켜야 req.ip가 손님 IP가 되고, 요청 제한이 프록시 IP 하나로 뭉치지 않는다.
+app.set("trust proxy", trustProxyFromEnv());
 
 // Next.js (localhost:3000) calls this API with the session cookie.
 app.use(

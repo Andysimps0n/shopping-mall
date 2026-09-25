@@ -7,6 +7,7 @@ import * as PortOne from "@portone/browser-sdk/v2";
 import AddressSearch from "./AddressSearch";
 import { useCart } from "./CartProvider";
 import {
+  completePayment,
   createOrder,
   fetchMyOrders,
   finishBrowserPayment,
@@ -43,6 +44,7 @@ const ORDER_ERRORS = {
   cart_empty: "장바구니가 비어 있습니다.",
   login_required: "로그인 후 주문할 수 있습니다.",
   payment_confirming: "이전 결제를 확인하는 동안에는 다시 결제할 수 없습니다.",
+  already_paid: "이미 결제가 확인된 주문이 있습니다.",
 };
 
 export default function CheckoutPage() {
@@ -96,7 +98,9 @@ export default function CheckoutPage() {
 
     fetchMyOrders().then((result) => {
       if (ignore) return;
-      const open = (result.orders ?? []).find((order) => order.status === "CONFIRMING");
+      const open = (result.orders ?? []).find(
+        (order) => order.status === "CONFIRMING" || order.status === "PENDING",
+      );
       setConfirmingOrderId(open?.id ?? "");
     });
 
@@ -156,6 +160,10 @@ export default function CheckoutPage() {
 
     if (!created.ok || !created.data?.paymentId) {
       setPhase("form");
+      if (created.data?.error === "already_paid" && created.data?.orderId) {
+        router.push(`/orders/${created.data.orderId}/complete`);
+        return;
+      }
       if (created.data?.error === "payment_confirming" && created.data?.orderId) {
         setConfirmingOrderId(created.data.orderId);
       }
@@ -183,6 +191,8 @@ export default function CheckoutPage() {
       );
     } catch (err) {
       console.error(err);
+      // 결제창이 안 열리면 이 PENDING 주문을 닫아야 다음 결제가 막히지 않는다.
+      await completePayment(order.paymentId, "failed");
       setPhase("form");
       setError("결제창을 열지 못했습니다.");
       return;
