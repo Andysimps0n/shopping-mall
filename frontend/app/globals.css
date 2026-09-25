@@ -4108,33 +4108,95 @@ svg {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  max-width: 32rem;
 }
 
-.checkout-methods {
-  margin: 0.25rem 0 0;
-  padding: 0;
-  border: 0;
+.checkout-consent {
   display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.checkout-method {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
   font-size: 0.9375rem;
+  line-height: 1.45;
   color: var(--color-ink);
 }
 
-.checkout-submit {
-  width: 100%;
-  margin-top: 0.4rem;
+.checkout-consent input {
+  margin-top: 0.2rem;
 }
 
-.checkout-submit:disabled {
-  opacity: 0.55;
-  cursor: wait;
+.checkout-details {
+  border-top: 1px solid var(--color-hairline);
+  padding: 0.75rem 0 0;
+}
+
+.checkout-details summary {
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.checkout-details p {
+  margin: 0.65rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-muted, #6e6e73);
+}
+
+.checkout-details a {
+  color: var(--color-brand);
+}
+
+.checkout-pay {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.checkout-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.checkout-total strong {
+  font-weight: 600;
+}
+
+.checkout-pay-button {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 9999px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.checkout-pay-button--kakao {
+  background-color: #fee500;
+  color: #191919;
+}
+
+.checkout-pay-button--naver {
+  background-color: #03c75a;
+  color: #ffffff;
+}
+
+.checkout-pay-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .checkout-error {
@@ -4216,6 +4278,13 @@ svg {
 
 .order-actions {
   margin-top: 1.5rem;
+}
+
+.order-actions .button:disabled {
+  background-color: #d2d2d7;
+  color: #1d1d1f;
+  opacity: 1;
+  cursor: not-allowed;
 }
 
 .profile-links {

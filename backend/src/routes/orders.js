@@ -45,7 +45,10 @@ router.post("/", async (req, res) => {
   try {
     const result = await createOrderFromCart(req.userId, req.body);
     if (!result.ok) {
-      res.status(result.status).json({ error: result.error });
+      res.status(result.status).json({
+        error: result.error,
+        orderId: result.orderId,
+      });
       return;
     }
 

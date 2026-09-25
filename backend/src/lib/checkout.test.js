@@ -6,7 +6,9 @@ import { isAdminUser } from "./admin.js";
 import { parseShippingAddress } from "./address.js";
 import { calculateShippingFee } from "../config/shipping.js";
 import { capQuantity, orderNameFromItems, priceLines } from "./orderMath.js";
+import { prisma } from "../../lib/prisma.js";
 import { decidePaymentUpdate } from "./paymentDecision.js";
+import { createOrderFromCart, syncOrderPayment } from "./orderStore.js";
 import { safeNextPath } from "./safeNext.js";
 
 test("shipping fee follows the config", () => {
@@ -105,6 +107,45 @@ test("a payment is marked paid only when PortOne amount matches", () => {
     decidePaymentUpdate(order, { status: "FAILED" }).action,
     "mark_failed",
   );
+
+  const confirming = { status: "CONFIRMING", totalAmount: 50000 };
+  assert.equal(
+    decidePaymentUpdate(confirming, { status: "FAILED" }).action,
+    "mark_failed",
+  );
+  assert.equal(
+    decidePaymentUpdate(confirming, { status: "CANCELLED" }).action,
+    "mark_cancelled",
+  );
+  assert.equal(
+    decidePaymentUpdate(confirming, null, "returned").reason,
+    "confirming",
+  );
+  assert.equal(
+    decidePaymentUpdate(confirming, null, "cancelled").action,
+    "mark_cancelled",
+  );
+  assert.equal(
+    decidePaymentUpdate(confirming, null, "failed").action,
+    "mark_failed",
+  );
+
+  // 같은 PAID 웹훅이 다시 와도 두 번째부터는 상태가 바뀌지 않는다.
+  assert.equal(
+    decidePaymentUpdate(confirming, {
+      status: "PAID",
+      currency: "KRW",
+      amount: { total: 50000 },
+    }).action,
+    "mark_paid",
+  );
+  assert.equal(
+    decidePaymentUpdate(
+      { status: "PAID", totalAmount: 50000 },
+      { status: "PAID", currency: "KRW", amount: { total: 50000 } },
+    ).action,
+    "none",
+  );
 });
 
 test("next path stays on this site", () => {
@@ -157,4 +198,129 @@ test("webhook verify accepts a real signature and rejects a bad one", async () =
     () => Webhook.verify(secret, payload, { ...headers, "webhook-signature": "v1,aaaa" }),
     (error) => error instanceof Webhook.WebhookVerificationError,
   );
+});
+
+test("cart is cleared only when a payment first becomes PAID", async () => {
+  const stamp = `pay-review-${crypto.randomUUID()}`;
+  const user = await prisma.user.create({
+    data: {
+      provider: "kakao",
+      providerUserId: stamp,
+      name: "결제확인",
+    },
+  });
+
+  try {
+    const product = await prisma.product.findFirst({ where: { isActive: true } });
+    assert.ok(product, "seeded product missing");
+
+    const cart = await prisma.cart.create({
+      data: {
+        userId: user.id,
+        items: { create: { productId: product.id, quantity: 1 } },
+      },
+    });
+
+    async function makeOrder(paymentId) {
+      return prisma.order.create({
+        data: {
+          userId: user.id,
+          status: "PENDING",
+          itemsTotal: product.price,
+          shippingFee: 0,
+          totalAmount: product.price,
+          recipientName: "김앤",
+          phone: "01012345678",
+          postalCode: "37774",
+          address1: "경북 포항시 남구 대이로 45",
+          payMethod: "kakaopay",
+          paymentId,
+          orderName: product.name,
+          items: {
+            create: {
+              productId: product.id,
+              productName: product.name,
+              unitPrice: product.price,
+              quantity: 1,
+              lineTotal: product.price,
+            },
+          },
+        },
+      });
+    }
+
+    async function itemCount() {
+      return prisma.cartItem.count({ where: { cartId: cart.id } });
+    }
+
+    const paidPayment = {
+      status: "PAID",
+      currency: "KRW",
+      amount: { total: product.price },
+    };
+
+    await makeOrder(`${stamp}-failed`);
+    const failed = await syncOrderPayment(`${stamp}-failed`, {
+      browserResult: "failed",
+      source: "browser",
+      fetchPayment: async () => ({ status: "FAILED" }),
+    });
+    assert.equal(failed.order.status, "FAILED");
+    assert.equal(await itemCount(), 1);
+
+    await makeOrder(`${stamp}-cancelled`);
+    const cancelled = await syncOrderPayment(`${stamp}-cancelled`, {
+      browserResult: "cancelled",
+      source: "browser",
+      fetchPayment: async () => {
+        const error = new Error("missing");
+        error.data = { type: "PAYMENT_NOT_FOUND" };
+        throw error;
+      },
+    });
+    assert.equal(cancelled.order.status, "CANCELLED");
+    assert.equal(await itemCount(), 1);
+
+    await makeOrder(`${stamp}-timeout`);
+    const timedOut = await syncOrderPayment(`${stamp}-timeout`, {
+      browserResult: "returned",
+      source: "browser",
+      fetchPayment: async () => {
+        throw new Error("timeout");
+      },
+    });
+    assert.equal(timedOut.order.status, "CONFIRMING");
+    assert.equal(await itemCount(), 1);
+
+    const blocked = await createOrderFromCart(user.id, {
+      recipientName: "김앤",
+      phone: "01012345678",
+      postalCode: "37774",
+      address1: "경북 포항시 남구 대이로 45",
+      payMethod: "kakaopay",
+    });
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.error, "payment_confirming");
+
+    const firstPaid = await syncOrderPayment(`${stamp}-timeout`, {
+      source: "webhook",
+      fetchPayment: async () => paidPayment,
+    });
+    assert.equal(firstPaid.order.status, "PAID");
+    assert.equal(await itemCount(), 0);
+
+    await prisma.cartItem.create({
+      data: { cartId: cart.id, productId: product.id, quantity: 1 },
+    });
+    const secondPaid = await syncOrderPayment(`${stamp}-timeout`, {
+      source: "webhook",
+      fetchPayment: async () => paidPayment,
+    });
+    assert.equal(secondPaid.order.status, "PAID");
+    assert.equal(await itemCount(), 1);
+  } finally {
+    await prisma.order.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+    await prisma.$disconnect();
+  }
 });

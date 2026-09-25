@@ -46,3 +46,18 @@ export function buildPortOnePaymentRequest({
 
   return request;
 }
+
+/**
+ * 결제창 응답을 서버에 넘길 힌트로 나눈다.
+ * code가 없으면 창은 성공으로 돌아온 것이다. 그래도 완료는 서버 확인 뒤에만 된다.
+ * 취소 코드 문자열은 SDK에 enum으로 고정되어 있지 않아, CANCEL이 들어간 코드만 취소로 본다.
+ *
+ * @param {{ code?: string | null }} response
+ * @returns {"cancelled" | "failed" | "returned"}
+ */
+export function classifyBrowserResult(response) {
+  const code = String(response?.code || "").toUpperCase();
+  if (!code) return "returned";
+  if (code.includes("CANCEL")) return "cancelled";
+  return "failed";
+}

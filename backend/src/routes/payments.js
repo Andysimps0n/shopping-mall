@@ -29,13 +29,22 @@ router.post("/complete", requireUser, async (req, res) => {
       return;
     }
 
+    const browserResult = req.body?.browserResult;
+    const hint =
+      browserResult === "cancelled" || browserResult === "failed" || browserResult === "returned"
+        ? browserResult
+        : "returned";
+
     const owned = await prisma.order.findUnique({ where: { paymentId } });
     if (!owned || owned.userId !== req.userId) {
       res.status(404).json({ error: "not_found" });
       return;
     }
 
-    const result = await syncOrderPayment(paymentId);
+    const result = await syncOrderPayment(paymentId, {
+      browserResult: hint,
+      source: "browser",
+    });
     sendSyncResult(res, result);
   } catch (err) {
     console.error(err);
@@ -75,7 +84,9 @@ router.post("/webhook", async (req, res) => {
   }
 
   try {
-    const result = await syncOrderPayment(webhook.data.paymentId);
+    const result = await syncOrderPayment(webhook.data.paymentId, {
+      source: "webhook",
+    });
 
     // 없는 주문은 우리 결제가 아니다. 재시도해도 소용이 없으니 200.
     if (result.error === "not_found") {

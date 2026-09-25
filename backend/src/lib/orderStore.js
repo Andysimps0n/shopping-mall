@@ -66,6 +66,20 @@ export async function createOrderFromCart(userId, body) {
     return { ok: false, status: 400, error: "cart_empty" };
   }
 
+  // 확인이 끝나기 전에 새 주문을 만들면 같은 장바구니로 두 번 결제될 수 있다.
+  const confirming = await prisma.order.findFirst({
+    where: { userId, status: "CONFIRMING" },
+    select: { id: true },
+  });
+  if (confirming) {
+    return {
+      ok: false,
+      status: 409,
+      error: "payment_confirming",
+      orderId: confirming.id,
+    };
+  }
+
   const priced = priceLines(rows);
   const paymentId = `payment-${crypto.randomUUID()}`;
 
@@ -89,8 +103,8 @@ export async function createOrderFromCart(userId, body) {
   return { ok: true, order };
 }
 
-async function applyDecision(order, payment) {
-  const decision = decidePaymentUpdate(order, payment);
+async function applyDecision(order, payment, browserResult) {
+  const decision = decidePaymentUpdate(order, payment, browserResult);
 
   if (decision.action === "mark_paid") {
     await prisma.$transaction(async (tx) => {
@@ -113,10 +127,14 @@ async function applyDecision(order, payment) {
     });
   } else if (decision.action === "mark_failed" || decision.action === "mark_cancelled") {
     const status = decision.action === "mark_failed" ? "FAILED" : "CANCELLED";
+    // 장바구니는 여기서 비우지 않는다. PAID로 처음 바뀔 때만 비운다.
     await prisma.order.updateMany({
       where: {
         id: order.id,
-        status: status === "CANCELLED" ? { in: ["PENDING", "PAID"] } : "PENDING",
+        status:
+          status === "CANCELLED"
+            ? { in: ["PENDING", "CONFIRMING", "PAID"] }
+            : { in: ["PENDING", "CONFIRMING"] },
       },
       data: {
         status,
@@ -142,10 +160,23 @@ async function applyDecision(order, payment) {
 
 /**
  * paymentId로 주문을 찾고, PortOne 조회 결과와 금액이 같을 때만 PAID로 바꾼다.
- * 이미 PAID면 다시 처리하지 않는다.
+ * 조회 전에 PENDING을 CONFIRMING으로 바꿔 둔다.
+ * 조회가 시간 초과되거나 설정이 없어도 주문은 CONFIRMING에 남고, 웹훅이 나중에 닫는다.
+ * 이미 PAID면 다시 처리하지 않는다. 장바구니도 그 첫 한 번만 비운다.
+ *
+ * @param {string} paymentId
+ * @param {{
+ *   browserResult?: "cancelled" | "failed" | "returned" | null,
+ *   source?: "browser" | "webhook",
+ *   fetchPayment?: (paymentId: string) => Promise<unknown>
+ * }} [options]
+ * fetchPayment는 테스트에서 PortOne 조회만 바꿔 끼울 때 쓴다. 요청 처리에서는 비워 둔다.
  */
-export async function syncOrderPayment(paymentId) {
-  const order = await prisma.order.findUnique({
+export async function syncOrderPayment(paymentId, options = {}) {
+  const browserResult = options.browserResult ?? null;
+  const source = options.source === "webhook" ? "webhook" : "browser";
+
+  let order = await prisma.order.findUnique({
     where: { paymentId },
     include: orderInclude,
   });
@@ -154,25 +185,44 @@ export async function syncOrderPayment(paymentId) {
     return { ok: false, status: 404, error: "not_found" };
   }
 
-  let payment;
+  if (order.status === "PENDING") {
+    await prisma.order.updateMany({
+      where: { id: order.id, status: "PENDING" },
+      data: { status: "CONFIRMING" },
+    });
+    order = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: orderInclude,
+    });
+  }
+
+  const fetchPayment = options.fetchPayment ?? fetchPortOnePayment;
+  let payment = null;
   try {
-    payment = await fetchPortOnePayment(paymentId);
+    payment = await fetchPayment(paymentId);
   } catch (error) {
-    if (error?.code === "portone_not_configured") {
-      return { ok: false, status: 503, error: "portone_not_configured", order };
-    }
-    if (isPaymentNotFound(error)) {
+    if (!isPaymentNotFound(error)) {
+      const notConfigured = error?.code === "portone_not_configured";
+      // 브라우저 완료 요청은 손님에게 "확인 중"을 보여 주고 끝낸다.
+      // 웹훅은 5xx를 돌려 PortOne이 다시 보내게 한다.
+      if (source === "webhook") {
+        return {
+          ok: false,
+          status: notConfigured ? 503 : 500,
+          error: notConfigured ? "portone_not_configured" : "portone_unavailable",
+          order,
+        };
+      }
       return {
-        ok: false,
-        status: 409,
-        error: "payment_not_found",
+        ok: true,
+        status: 200,
+        error: notConfigured ? "portone_not_configured" : "confirming",
         order,
       };
     }
-    throw error;
   }
 
-  const result = await applyDecision(order, payment);
+  const result = await applyDecision(order, payment, browserResult);
 
   if (result.decision.action === "reject") {
     return {
@@ -187,14 +237,23 @@ export async function syncOrderPayment(paymentId) {
     return { ok: true, status: 200, order: result.order };
   }
 
-  if (result.decision.action === "mark_failed" || result.decision.action === "mark_cancelled") {
+  if (result.order.status === "FAILED" || result.order.status === "CANCELLED") {
     return { ok: true, status: 200, order: result.order };
   }
 
+  if (source === "webhook") {
+    return {
+      ok: false,
+      status: 409,
+      error: "not_paid",
+      order: result.order,
+    };
+  }
+
   return {
-    ok: false,
-    status: 409,
-    error: "not_paid",
+    ok: true,
+    status: 200,
+    error: "confirming",
     order: result.order,
   };
 }

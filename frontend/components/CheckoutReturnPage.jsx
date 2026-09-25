@@ -23,6 +23,7 @@ export default function CheckoutReturnPage() {
 
     finishBrowserPayment({
       paymentId,
+      code: params.get("code") ?? "",
       message: params.get("message") ?? "",
       pgMessage: params.get("pgMessage") ?? "",
     }).then((href) => {

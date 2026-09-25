@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./auth";
+import { classifyBrowserResult } from "./portoneCheckout";
 
 async function readJson(response) {
   try {
@@ -31,12 +32,12 @@ export async function createOrder(address) {
   return { ok: response.ok, data };
 }
 
-export async function completePayment(paymentId) {
+export async function completePayment(paymentId, browserResult) {
   const response = await fetch(`${API_BASE_URL}/payments/complete`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paymentId }),
+    body: JSON.stringify({ paymentId, browserResult }),
   });
   const data = await readJson(response);
   return { ok: response.ok, data };
@@ -45,24 +46,25 @@ export async function completePayment(paymentId) {
 /**
  * 결제창 결과로 이동할 주소.
  * 브라우저가 성공이라고 해도, 서버가 PAID라고 한 뒤에만 완료 화면으로 간다.
+ * 확인이 끝나지 않으면 실패 화면이 아니라 "확인 중" 상태로 남긴다.
  */
-export async function finishBrowserPayment({ paymentId, message, pgMessage }) {
-  const result = await completePayment(paymentId);
+export async function finishBrowserPayment({ paymentId, code, message, pgMessage }) {
+  const browserResult = classifyBrowserResult({ code, message, pgMessage });
+  const result = await completePayment(paymentId, browserResult);
   const orderId = result.data?.orderId;
+  const status = result.data?.status;
   const rawMessage = pgMessage || message || "";
 
-  if (result.data?.status === "PAID" && orderId) {
+  if (!orderId) return "/cart";
+
+  if (status === "PAID") {
     return `/orders/${orderId}/complete`;
   }
 
-  if (orderId) {
-    const query = new URLSearchParams();
-    if (rawMessage) query.set("message", rawMessage);
-    const suffix = query.toString() ? `?${query}` : "";
-    return `/orders/${orderId}/fail${suffix}`;
-  }
-
-  return "/cart";
+  const query = new URLSearchParams();
+  if (rawMessage && status !== "CONFIRMING") query.set("message", rawMessage);
+  const suffix = query.toString() ? `?${query}` : "";
+  return `/orders/${orderId}/fail${suffix}`;
 }
 
 export async function fetchOrder(orderId) {
