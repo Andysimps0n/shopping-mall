@@ -4109,6 +4109,7 @@ svg {
   flex-direction: column;
   gap: 0.9rem;
   max-width: 32rem;
+  padding-bottom: 12.5rem;
 }
 
 .checkout-consent {
@@ -4137,6 +4138,12 @@ svg {
   color: var(--color-ink);
 }
 
+.checkout-details-body {
+  max-height: 4.5rem;
+  margin-top: 0.45rem;
+  overflow-y: auto;
+}
+
 .checkout-details p {
   margin: 0.65rem 0 0;
   font-size: 0.875rem;
@@ -4149,10 +4156,23 @@ svg {
 }
 
 .checkout-pay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  margin: 0;
+  padding: 0.75rem var(--page-inset) 1rem;
+  background-color: var(--color-white);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.checkout-pay-inner {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-top: 0.5rem;
+  width: 100%;
+  max-width: 32rem;
 }
 
 .checkout-total {
@@ -4197,6 +4217,58 @@ svg {
 .checkout-pay-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.checkout-postal {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.checkout-postal .login-field {
+  flex: 1;
+}
+
+.checkout-postal-button {
+  flex-shrink: 0;
+  min-height: var(--control-height);
+}
+
+.postcode-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-white);
+}
+
+.postcode-layer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.postcode-layer-frame {
+  flex: 1;
+  min-height: 0;
+}
+
+.postcode-layer-error {
+  margin: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+@media (max-width: 767px) {
+  .checkout-pay {
+    bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
+    padding: 0.75rem 1rem 0.85rem;
+  }
 }
 
 .checkout-error {

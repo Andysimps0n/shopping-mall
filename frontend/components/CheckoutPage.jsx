@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as PortOne from "@portone/browser-sdk/v2";
+import AddressSearch from "./AddressSearch";
 import { useCart } from "./CartProvider";
 import {
   createOrder,
@@ -61,6 +62,7 @@ export default function CheckoutPage() {
   const [confirmingOrderId, setConfirmingOrderId] = useState("");
   const [error, setError] = useState("");
   const [phase, setPhase] = useState("form");
+  const [postcodeOpen, setPostcodeOpen] = useState(false);
 
   useEffect(() => {
     setForm(readCheckoutAddress());
@@ -280,18 +282,27 @@ export default function CheckoutPage() {
             />
           </label>
 
-          <label className="login-field">
-            <span className="login-field-label">우편번호</span>
-            <input
-              name="postalCode"
-              required
-              inputMode="numeric"
-              autoComplete="postal-code"
-              maxLength={5}
-              value={form.postalCode}
-              onChange={(event) => updateField("postalCode", event.target.value)}
-            />
-          </label>
+            <div className="checkout-postal">
+              <label className="login-field">
+                <span className="login-field-label">우편번호</span>
+                <input
+                  name="postalCode"
+                  required
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={5}
+                  value={form.postalCode}
+                  onChange={(event) => updateField("postalCode", event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="button button--secondary checkout-postal-button"
+                onClick={() => setPostcodeOpen(true)}
+              >
+                주소 검색
+              </button>
+            </div>
 
           <label className="login-field">
             <span className="login-field-label">주소</span>
@@ -352,28 +363,32 @@ export default function CheckoutPage() {
 
           <details className="checkout-details">
             <summary>구매 조건 확인</summary>
-            <p>
-              [안내 문구 초안] 주문 상품, 수량, 결제 금액, 배송지를 확인했습니다.
-              앤클로이 이용약관과 교환·환불 안내의 확정본이 이 자리에 들어갑니다.
-              지금은 자리만 잡아 둔 문장입니다.
-            </p>
-            <p>
-              <Link href="/terms">이용약관 초안</Link>
-              {" · "}
-              <Link href="/refund">교환·환불 초안</Link>
-            </p>
+            <div className="checkout-details-body">
+              <p>
+                [안내 문구 초안] 주문 상품, 수량, 결제 금액, 배송지를 확인했습니다.
+                앤클로이 이용약관과 교환·환불 안내의 확정본이 이 자리에 들어갑니다.
+                지금은 자리만 잡아 둔 문장입니다.
+              </p>
+              <p>
+                <Link href="/terms">이용약관 초안</Link>
+                {" · "}
+                <Link href="/refund">교환·환불 초안</Link>
+              </p>
+            </div>
           </details>
 
           <details className="checkout-details">
             <summary>개인정보 제3자 제공 (PG사·택배사)</summary>
-            <p>
-              [안내 문구 초안] 결제와 배송을 진행하려면 이름, 연락처, 주소, 주문
-              정보가 결제대행사(PG사)와 택배사에 제공될 수 있습니다. 제공 항목,
-              목적, 보유 기간은 약관이 확정되면 이 문장을 교체합니다.
-            </p>
-            <p>
-              <Link href="/privacy">개인정보처리방침 초안</Link>
-            </p>
+            <div className="checkout-details-body">
+              <p>
+                [안내 문구 초안] 결제와 배송을 진행하려면 이름, 연락처, 주소, 주문
+                정보가 결제대행사(PG사)와 택배사에 제공될 수 있습니다. 제공 항목,
+                목적, 보유 기간은 약관이 확정되면 이 문장을 교체합니다.
+              </p>
+              <p>
+                <Link href="/privacy">개인정보처리방침 초안</Link>
+              </p>
+            </div>
           </details>
 
           {confirmingOrderId ? (
@@ -389,31 +404,43 @@ export default function CheckoutPage() {
             </p>
           ) : null}
 
-          <div className="checkout-pay">
-            <p className="checkout-total">
-              <span>최종 결제 금액</span>
-              <strong>{formatPrice(accountCart.totalAmount)}</strong>
-            </p>
-            {PAY_METHODS.map((method) => (
-              <button
-                key={method.id}
-                type="button"
-                className={method.className}
-                disabled={payDisabled}
-                onClick={() => startPay(method.id)}
-              >
-                {phase === "confirming"
-                  ? "결제 확인 중"
-                  : busy
-                    ? "결제창 여는 중"
-                    : method.label}
-              </button>
-            ))}
-          </div>
           <p className="checkout-note">
             위 금액은 상품 금액과 배송비를 더한 값이며, 서버가 상품 가격으로 다시 계산합니다.
           </p>
+
+          <div className="checkout-pay">
+            <div className="checkout-pay-inner">
+              <p className="checkout-total">
+                <span>최종 결제 금액</span>
+                <strong>{formatPrice(accountCart.totalAmount)}</strong>
+              </p>
+              {PAY_METHODS.map((method) => (
+                <button
+                  key={method.id}
+                  type="button"
+                  className={method.className}
+                  disabled={payDisabled}
+                  onClick={() => startPay(method.id)}
+                >
+                  {phase === "confirming"
+                    ? "결제 확인 중"
+                    : busy
+                      ? "결제창 여는 중"
+                      : method.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </form>
+        {postcodeOpen ? (
+          <AddressSearch
+            onComplete={({ postalCode, address1 }) => {
+              setForm((current) => ({ ...current, postalCode, address1 }));
+              setPostcodeOpen(false);
+            }}
+            onClose={() => setPostcodeOpen(false)}
+          />
+        ) : null}
       </div>
     </main>
   );
