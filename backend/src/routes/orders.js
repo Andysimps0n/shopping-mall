@@ -16,6 +16,7 @@ const LOGIN_KINDS = new Set(["prompted", "resumed"]);
 const limitCheckoutLogin = rateLimit({ windowMs: 60_000, max: 20 });
 const limitCreateOrder = rateLimit({ windowMs: 60_000, max: 20 });
 const limitRefresh = rateLimit({ windowMs: 60_000, max: 30 });
+const limitReadOrder = rateLimit({ windowMs: 60_000, max: 30 });
 
 function readOrderId(value) {
   if (typeof value !== "string") return "";
@@ -94,7 +95,8 @@ router.post("/:id/refresh", limitRefresh, async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+// 끝난 주문은 refreshOwnedOrder가 PortOne을 부르지 않는다. 새로고침이 몰려도 여기서 막는다.
+router.get("/:id", limitReadOrder, async (req, res) => {
   try {
     const orderId = readOrderId(req.params.id);
     if (!orderId) {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { Webhook } from "@portone/server-sdk";
 import { isAdminUser } from "./admin.js";
@@ -10,10 +11,12 @@ import { prisma } from "../../lib/prisma.js";
 import { decidePaymentUpdate } from "./paymentDecision.js";
 import { mergeCart } from "./cartStore.js";
 import {
+  canAttemptRefund,
   createOrderFromCart,
   isOrderStale,
   listOrdersForAdmin,
   refreshOwnedOrder,
+  refundBackoffMs,
   staleOrdersToRecheck,
   syncOrderPayment,
 } from "./orderStore.js";
@@ -581,6 +584,42 @@ test("a mismatched or stale confirmation does not block the next checkout", asyn
   }
 });
 
+test("refund retries wait and then stop", () => {
+  assert.equal(refundBackoffMs(0), 0);
+  assert.equal(refundBackoffMs(1), 60 * 1000);
+  assert.equal(refundBackoffMs(2), 5 * 60 * 1000);
+  assert.equal(refundBackoffMs(3), null);
+
+  const at = new Date("2026-09-25T00:00:00Z");
+  assert.equal(
+    canAttemptRefund({ refundAttempts: 1, refundAttemptAt: at }, new Date("2026-09-25T00:00:30Z")),
+    false,
+  );
+  assert.equal(
+    canAttemptRefund({ refundAttempts: 1, refundAttemptAt: at }, new Date("2026-09-25T00:01:00Z")),
+    true,
+  );
+  assert.equal(
+    canAttemptRefund({ refundAttempts: 3, refundAttemptAt: at }, new Date("2026-09-25T02:00:00Z")),
+    false,
+  );
+});
+
+test("the one-open-order index is declared and present", async () => {
+  const schema = readFileSync(new URL("../../prisma/schema.prisma", import.meta.url), "utf8");
+  assert.match(schema, /partialIndexes/);
+  assert.match(schema, /orders_one_open_per_user/);
+  assert.match(schema, /ANY \(ARRAY/);
+
+  const rows = await prisma.$queryRaw`
+    SELECT indexdef FROM pg_indexes WHERE indexname = 'orders_one_open_per_user'
+  `;
+  assert.equal(rows.length, 1);
+  assert.match(rows[0].indexdef, /UNIQUE/);
+  assert.match(rows[0].indexdef, /PENDING/);
+  assert.match(rows[0].indexdef, /CONFIRMING/);
+});
+
 test("order list rechecks only a few stale orders", () => {
   const now = new Date("2026-09-25T12:00:00Z");
   const orders = [0, 1, 2, 3, 4].map((index) => ({
@@ -642,13 +681,21 @@ test("checkout closes an unpaid open order and a double submit stays at one open
       throw error;
     };
 
-    const resumed = await createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound });
-    assert.equal(resumed.ok, true);
-    assert.notEqual(resumed.order.id, abandoned.id);
+    const withinGrace = await createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound });
+    assert.equal(withinGrace.ok, false);
+    assert.equal(withinGrace.error, "payment_confirming");
+    assert.equal(withinGrace.orderId, abandoned.id);
+    assert.equal((await prisma.order.findUnique({ where: { id: abandoned.id } })).status, "PENDING");
+
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    await prisma.$executeRaw`UPDATE orders SET "createdAt" = ${twoMinutesAgo} WHERE id = ${abandoned.id}`;
+    const afterGrace = await createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound });
+    assert.equal(afterGrace.ok, true);
+    assert.notEqual(afterGrace.order.id, abandoned.id);
     const closed = await prisma.order.findUnique({ where: { id: abandoned.id } });
     assert.equal(closed.status, "CANCELLED");
 
-    await prisma.order.delete({ where: { id: resumed.order.id } });
+    await prisma.order.delete({ where: { id: afterGrace.order.id } });
 
     const [first, second] = await Promise.all([
       createOrderFromCart(user.id, shippingBody, { fetchPayment: notFound }),
@@ -735,10 +782,155 @@ test("a missing payment on the result page closes after a short grace, and a fai
     });
     assert.equal(failedRefund.order.refundStatus, "FAILED");
     assert.equal(failedRefund.order.refundMessage, "pg down");
+    assert.equal(failedRefund.order.refundAttempts, 1);
+
+    let cancelCalls = 1;
+    const immediate = await syncOrderPayment(mismatch.paymentId, {
+      source: "webhook",
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price - 1 },
+      }),
+      cancelPayment: async () => {
+        cancelCalls += 1;
+        throw new Error("pg down");
+      },
+    });
+    assert.equal(cancelCalls, 1);
+    assert.equal(immediate.order.refundAttempts, 1);
+
+    const afterWait = await syncOrderPayment(mismatch.paymentId, {
+      source: "webhook",
+      now: new Date(Date.now() + 61 * 1000),
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price - 1 },
+      }),
+      cancelPayment: async () => {
+        cancelCalls += 1;
+        throw new Error("pg down");
+      },
+    });
+    assert.equal(cancelCalls, 2);
+    assert.equal(afterWait.order.refundAttempts, 2);
 
     const listed = await listOrdersForAdmin();
     assert.equal(listed.some((order) => order.id === failedRefund.order.id), true);
     assert.equal(listed.some((order) => order.id === young.id), false);
+  } finally {
+    await prisma.order.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("a ready payment past the grace closes, and a late paid duplicate is refunded", async () => {
+  const stamp = `ready-${crypto.randomUUID()}`;
+  const user = await prisma.user.create({
+    data: { provider: "kakao", providerUserId: stamp, name: "준비" },
+  });
+
+  try {
+    const product = await prisma.product.findFirst({ where: { isActive: true } });
+    assert.ok(product);
+    await prisma.cart.create({
+      data: {
+        userId: user.id,
+        items: { create: { productId: product.id, quantity: 1 } },
+      },
+    });
+
+    async function makeOrder(paymentId, status) {
+      return prisma.order.create({
+        data: {
+          userId: user.id,
+          status,
+          itemsTotal: product.price,
+          shippingFee: 0,
+          totalAmount: product.price,
+          recipientName: "김앤",
+          phone: "01012345678",
+          postalCode: "37774",
+          address1: "경북 포항시 남구 대이로 45",
+          payMethod: "kakaopay",
+          paymentId,
+          orderName: product.name,
+          ...(status === "PAID" ? { paidAt: new Date() } : {}),
+          items: {
+            create: {
+              productId: product.id,
+              productName: product.name,
+              unitPrice: product.price,
+              quantity: 1,
+              lineTotal: product.price,
+            },
+          },
+        },
+      });
+    }
+
+    const ready = await makeOrder(`${stamp}-ready`, "CONFIRMING");
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    await prisma.$executeRaw`UPDATE orders SET "createdAt" = ${twoMinutesAgo} WHERE id = ${ready.id}`;
+    const next = await createOrderFromCart(user.id, shippingBody, {
+      fetchPayment: async () => ({ status: "READY" }),
+    });
+    assert.equal(next.ok, true);
+    const closedReady = await prisma.order.findUnique({ where: { id: ready.id } });
+    assert.equal(closedReady.status, "CANCELLED");
+
+    await prisma.order.update({
+      where: { id: next.order.id },
+      data: { status: "PAID", paidAt: new Date() },
+    });
+    let portOneCalls = 0;
+    const finished = await refreshOwnedOrder(user.id, next.order.id, {
+      fetchPayment: async () => {
+        portOneCalls += 1;
+        throw new Error("must not ask PortOne about a finished order");
+      },
+    });
+    assert.equal(finished.status, "PAID");
+    assert.equal(portOneCalls, 0);
+
+    await prisma.order.update({
+      where: { id: next.order.id },
+      data: { status: "CANCELLED" },
+    });
+    const replacement = await makeOrder(`${stamp}-paid`, "PAID");
+    let cancelCalls = 0;
+    const late = await syncOrderPayment(next.order.paymentId, {
+      source: "webhook",
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price },
+      }),
+      cancelPayment: async () => {
+        cancelCalls += 1;
+      },
+    });
+    assert.equal(late.order.status, "FAILED");
+    assert.equal(late.order.refundStatus, "SUCCEEDED");
+    assert.equal(cancelCalls, 1);
+    assert.notEqual(late.order.id, replacement.id);
+    const listed = await listOrdersForAdmin();
+    assert.equal(listed.some((order) => order.id === late.order.id), true);
+
+    const again = await syncOrderPayment(next.order.paymentId, {
+      source: "webhook",
+      fetchPayment: async () => ({
+        status: "PAID",
+        currency: "KRW",
+        amount: { total: product.price },
+      }),
+      cancelPayment: async () => {
+        cancelCalls += 1;
+      },
+    });
+    assert.equal(cancelCalls, 1);
+    assert.equal(again.order.refundStatus, "SUCCEEDED");
   } finally {
     await prisma.order.deleteMany({ where: { userId: user.id } });
     await prisma.user.delete({ where: { id: user.id } });

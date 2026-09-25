@@ -51,6 +51,42 @@ export const AMOUNT_MISMATCH_MESSAGE = "결제 금액이 주문 금액과 다릅
 export const CONFIRM_EXPIRED_MESSAGE = "결제 확인 시간이 지났습니다.";
 export const PAYMENT_NEVER_STARTED_MESSAGE = "결제를 시작하지 않아 주문을 닫았습니다.";
 export const REFUND_REASON = "주문 금액과 결제 금액이 달라 전액 취소합니다.";
+export const LATE_PAID_MESSAGE = "이미 결제된 주문이 있어 나중에 도착한 결제를 취소합니다.";
+export const LATE_PAID_REFUND_REASON = "같은 장바구니로 이미 결제된 주문이 있어 전액 취소합니다.";
+export const PAYMENT_NOT_FINISHED_MESSAGE = "결제를 마치지 않아 주문을 닫았습니다.";
+
+/** 환불 취소 API를 최대 이 횟수만 부른다. 0부터 세면 세 번이다. */
+export const REFUND_ATTEMPT_CAP = 3;
+
+/**
+ * 실패한 환불을 바로 다시 부르지 않는다.
+ * 0번째 시도 전은 0, 1번 실패 후는 1분, 2번 실패 후는 5분. 그 다음은 더 부르지 않는다.
+ *
+ * @param {number} attempts
+ * @returns {number | null}
+ */
+export function refundBackoffMs(attempts) {
+  if (attempts <= 0) return 0;
+  if (attempts === 1) return 60 * 1000;
+  if (attempts === 2) return 5 * 60 * 1000;
+  return null;
+}
+
+/**
+ * @param {{ refundStatus?: string | null, refundAttempts?: number, refundAttemptAt?: Date | null }} order
+ * @param {Date} [now]
+ */
+export function canAttemptRefund(order, now = new Date()) {
+  if (order?.refundStatus === "SUCCEEDED") return false;
+  const attempts = order?.refundAttempts ?? 0;
+  if (attempts >= REFUND_ATTEMPT_CAP) return false;
+  const wait = refundBackoffMs(attempts);
+  if (wait == null) return false;
+  if (attempts === 0 || !order?.refundAttemptAt) return true;
+  const stamp = new Date(order.refundAttemptAt).getTime();
+  const clock = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  return clock - stamp >= wait;
+}
 
 const OPEN_STATUSES = ["PENDING", "CONFIRMING"];
 
@@ -209,37 +245,17 @@ async function applyDecision(order, payment, browserResult, options = {}) {
   const decision = decidePaymentUpdate(order, payment, browserResult);
 
   if (decision.action === "mark_paid") {
-    await prisma.$transaction(async (tx) => {
-      // 결제창을 연 상태(PENDING, CONFIRMING)에서 처음 PAID가 될 때만 장바구니를 비운다.
-      // 완료 요청과 웹훅이 동시에 와도 updateMany는 한 줄만 성공한다.
-      const claimed = await tx.order.updateMany({
-        where: { id: order.id, status: { in: ["PENDING", "CONFIRMING"] } },
-        data: {
-          status: "PAID",
-          paidAt: new Date(),
-          failureMessage: null,
-        },
+    const laterPaid = await findLaterPaidSameCart(order);
+    if (laterPaid) {
+      // 이미 닫힌 주문에 늦게 PAID가 오고, 같은 장바구니의 다른 주문은 결제됐다.
+      // 이 결제는 배송하지 않고 전액 취소한다.
+      await refundCapturedPayment(order, options, {
+        failureMessage: LATE_PAID_MESSAGE,
+        reason: LATE_PAID_REFUND_REASON,
       });
-
-      if (claimed.count === 1) {
-        const cart = await tx.cart.findUnique({ where: { userId: order.userId } });
-        if (cart) {
-          await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-        }
-        return;
-      }
-
-      // 실패나 취소 뒤에 늦게 도착한 PAID는 주문만 결제됨으로 남긴다.
-      // 손님이 그 사이 다시 담은 장바구니까지 지우지 않는다.
-      await tx.order.updateMany({
-        where: { id: order.id, status: { not: "PAID" } },
-        data: {
-          status: "PAID",
-          paidAt: new Date(),
-          failureMessage: null,
-        },
-      });
-    });
+    } else {
+      await markOrderPaid(order);
+    }
   } else if (decision.action === "mark_failed" || decision.action === "mark_cancelled") {
     const status = decision.action === "mark_failed" ? "FAILED" : "CANCELLED";
     // 장바구니는 여기서 비우지 않는다. PAID로 처음 바뀔 때만 비운다.
@@ -275,7 +291,80 @@ async function applyDecision(order, payment, browserResult, options = {}) {
   return { decision, order: fresh };
 }
 
+function cartLineKey(items) {
+  return [...(items ?? [])]
+    .map((item) => `${item.productId}:${item.quantity}`)
+    .sort()
+    .join("|");
+}
+
+/**
+ * 이 주문보다 나중에 만들어졌고, 같은 상품·수량으로 이미 PAID인 주문.
+ * 이전 구매와 구분하려고 더 이른 주문은 보지 않는다.
+ */
+async function findLaterPaidSameCart(order) {
+  if (order.status !== "FAILED" && order.status !== "CANCELLED") return null;
+  const mine = cartLineKey(order.items);
+  if (!mine) return null;
+
+  const others = await prisma.order.findMany({
+    where: {
+      userId: order.userId,
+      id: { not: order.id },
+      status: "PAID",
+      createdAt: { gte: order.createdAt },
+    },
+    include: { items: true },
+  });
+  return others.find((other) => cartLineKey(other.items) === mine) ?? null;
+}
+
+async function markOrderPaid(order) {
+  await prisma.$transaction(async (tx) => {
+    // 결제창을 연 상태(PENDING, CONFIRMING)에서 처음 PAID가 될 때만 장바구니를 비운다.
+    // 완료 요청과 웹훅이 동시에 와도 updateMany는 한 줄만 성공한다.
+    const claimed = await tx.order.updateMany({
+      where: { id: order.id, status: { in: ["PENDING", "CONFIRMING"] } },
+      data: {
+        status: "PAID",
+        paidAt: new Date(),
+        failureMessage: null,
+      },
+    });
+
+    if (claimed.count === 1) {
+      const cart = await tx.cart.findUnique({ where: { userId: order.userId } });
+      if (cart) {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+      }
+      return;
+    }
+
+    // 실패나 취소 뒤에 늦게 도착한 PAID는 주문만 결제됨으로 남긴다.
+    // 손님이 그 사이 다시 담은 장바구니까지 지우지 않는다.
+    await tx.order.updateMany({
+      where: { id: order.id, status: { not: "PAID" } },
+      data: {
+        status: "PAID",
+        paidAt: new Date(),
+        failureMessage: null,
+      },
+    });
+  });
+}
+
 async function recordAmountMismatch(order, options) {
+  await refundCapturedPayment(order, options, {
+    failureMessage: AMOUNT_MISMATCH_MESSAGE,
+    reason: REFUND_REASON,
+  });
+}
+
+/**
+ * 이미 잡힌 돈을 전액 취소한다. 성공한 환불은 다시 부르지 않고,
+ * 실패한 환불은 횟수와 시각을 남긴 뒤 대기 시간이 지나야 다시 부른다.
+ */
+async function refundCapturedPayment(order, options, { failureMessage, reason }) {
   if (order.status !== "PAID") {
     await prisma.order.updateMany({
       where: {
@@ -284,22 +373,27 @@ async function recordAmountMismatch(order, options) {
       },
       data: {
         status: "FAILED",
-        failureMessage: AMOUNT_MISMATCH_MESSAGE,
+        failureMessage,
       },
     });
   }
 
   const current = await prisma.order.findUnique({ where: { id: order.id } });
-  if (!current || current.status === "PAID" || current.refundStatus === "SUCCEEDED") {
-    return;
-  }
+  if (!current || current.status === "PAID" || current.refundStatus === "SUCCEEDED") return;
 
-  const cancel = options.cancelPayment ?? ((paymentId) => cancelPortOnePayment(paymentId, REFUND_REASON));
+  const now = options.now ? new Date(options.now) : new Date();
+  if (!canAttemptRefund(current, now)) return;
+
+  const cancel = options.cancelPayment ?? ((paymentId) => cancelPortOnePayment(paymentId, reason));
+  const attempt = {
+    refundAttempts: { increment: 1 },
+    refundAttemptAt: now,
+  };
   try {
     await cancel(order.paymentId);
     await prisma.order.update({
       where: { id: order.id },
-      data: { refundStatus: "SUCCEEDED", refundMessage: null },
+      data: { refundStatus: "SUCCEEDED", refundMessage: null, ...attempt },
     });
   } catch (error) {
     if (isPaymentAlreadyCancelled(error)) {
@@ -308,6 +402,7 @@ async function recordAmountMismatch(order, options) {
         data: {
           refundStatus: "SUCCEEDED",
           refundMessage: "이미 취소된 결제입니다.",
+          ...attempt,
         },
       });
       return;
@@ -317,7 +412,7 @@ async function recordAmountMismatch(order, options) {
     console.error("payment refund failed", { paymentId: order.paymentId });
     await prisma.order.update({
       where: { id: order.id },
-      data: { refundStatus: "FAILED", refundMessage: message },
+      data: { refundStatus: "FAILED", refundMessage: message, ...attempt },
     });
   }
 }
@@ -393,6 +488,7 @@ export async function syncOrderPayment(paymentId, options = {}) {
   }
 
   const result = await applyDecision(order, payment, browserResult, options);
+  const paymentStatus = payment?.status ?? null;
 
   if (result.decision.action === "reject") {
     return {
@@ -400,16 +496,17 @@ export async function syncOrderPayment(paymentId, options = {}) {
       status: 409,
       error: "amount_mismatch",
       paymentMissing,
+      paymentStatus,
       order: result.order,
     };
   }
 
   if (result.order.status === "PAID") {
-    return { ok: true, status: 200, paymentMissing, order: result.order };
+    return { ok: true, status: 200, paymentMissing, paymentStatus, order: result.order };
   }
 
   if (result.order.status === "FAILED" || result.order.status === "CANCELLED") {
-    return { ok: true, status: 200, paymentMissing, order: result.order };
+    return { ok: true, status: 200, paymentMissing, paymentStatus, order: result.order };
   }
 
   if (source === "webhook") {
@@ -418,6 +515,7 @@ export async function syncOrderPayment(paymentId, options = {}) {
       status: 409,
       error: "not_paid",
       paymentMissing,
+      paymentStatus,
       order: result.order,
     };
   }
@@ -427,6 +525,7 @@ export async function syncOrderPayment(paymentId, options = {}) {
     status: 200,
     error: "confirming",
     paymentMissing,
+    paymentStatus,
     order: result.order,
   };
 }
@@ -455,7 +554,7 @@ async function mapWithCap(items, limit, worker) {
 
 /**
  * 결제를 다시 시작하려는 사용자를 위해 열린 주문을 전부 확인한다.
- * 결제 건이 없으면 바로 닫는다. 진행 중인 결제는 기한 안이면 그대로 둔다.
+ * 결제 건이 없거나 READY여도 1분이 지나기 전에는 닫지 않고 확인 화면으로 보낸다.
  *
  * @param {string} userId
  * @param {{ now?: Date, fetchPayment?: (paymentId: string) => Promise<unknown>, cancelPayment?: (paymentId: string) => Promise<unknown> }} [options]
@@ -487,6 +586,7 @@ async function reconcileOneOpenOrder(order, options) {
     payment = await fetchPayment(order.paymentId);
   } catch (error) {
     if (isPaymentNotFound(error)) {
+      if (!isPastPaymentMissingGrace(order, options.now)) return "open";
       await closeOpenOrder(order.id, "CANCELLED", PAYMENT_NEVER_STARTED_MESSAGE);
       return "closed";
     }
@@ -502,10 +602,15 @@ async function reconcileOneOpenOrder(order, options) {
     browserResult: "returned",
     fetchPayment: async () => payment,
     cancelPayment: options.cancelPayment,
+    now: options.now,
   });
   const status = result.order?.status;
   if (status === "PAID") return "paid";
   if (status === "FAILED" || status === "CANCELLED") return "closed";
+  if (payment?.status === "READY" && isPastPaymentMissingGrace(order, options.now)) {
+    await closeOpenOrder(order.id, "CANCELLED", PAYMENT_NOT_FINISHED_MESSAGE);
+    return "closed";
+  }
   if (isOrderStale(order, options.now)) {
     await expireOrderIfStillOpen(order.id);
     return "closed";
@@ -576,6 +681,7 @@ export async function refreshOwnedOrder(userId, orderId, options = {}) {
     browserResult: "returned",
     fetchPayment: options.fetchPayment,
     cancelPayment: options.cancelPayment,
+    now,
   });
 
   const mid = await getOwnedOrder(userId, orderId);
@@ -583,8 +689,11 @@ export async function refreshOwnedOrder(userId, orderId, options = {}) {
   if (mid.status === "PENDING" || mid.status === "CONFIRMING") {
     if (stale) {
       await expireOrderIfStillOpen(mid.id);
-    } else if (synced.paymentMissing && isPastPaymentMissingGrace(order, now)) {
-      await closeOpenOrder(mid.id, "CANCELLED", PAYMENT_NEVER_STARTED_MESSAGE);
+    } else if (isPastPaymentMissingGrace(order, now) && (synced.paymentMissing || synced.paymentStatus === "READY")) {
+      const message = synced.paymentStatus === "READY"
+        ? PAYMENT_NOT_FINISHED_MESSAGE
+        : PAYMENT_NEVER_STARTED_MESSAGE;
+      await closeOpenOrder(mid.id, "CANCELLED", message);
     }
   }
 
