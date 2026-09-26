@@ -27,6 +27,18 @@ export async function quoteCart(items) {
   }
 }
 
+export async function fetchAccountCart() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/cart`, {
+      credentials: "include",
+    });
+    if (!response.ok) return null;
+    return readJson(response);
+  } catch {
+    return null;
+  }
+}
+
 export async function mergeAccountCart(items) {
   try {
     const response = await fetch(`${API_BASE_URL}/cart/merge`, {

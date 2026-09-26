@@ -1,68 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
 import LoginPage from "./LoginPage";
-import {
-  fetchCurrentUser,
-  logout,
-  profileCopy,
-  providerLabels,
-  safeNextPath,
-} from "@/lib/auth";
+import ProfileMenuRow, { Chevron } from "./ProfileMenuRow";
+import ProfileShell from "./ProfileShell";
+import { profileCopy, safeNextPath } from "@/lib/auth";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
-/**
- * /profile has two states, and the header always lands here.
- * No session → the existing login form.
- * Session → account details, and the only logout control.
- */
 export default function ProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = safeNextPath(searchParams.get("next"));
-  const [user, setUser] = useState(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchCurrentUser().then((nextUser) => {
-      if (!cancelled) {
-        setUser(nextUser);
-        setHasLoaded(true);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { user, hasLoaded } = useCurrentUser();
 
   useEffect(() => {
     if (!hasLoaded || !user || !nextPath || nextPath === "/profile") return;
     router.replace(nextPath);
   }, [hasLoaded, user, nextPath, router]);
 
-  async function handleLogout() {
-    setIsLoggingOut(true);
-    await logout();
-    setUser(null);
-    setIsLoggingOut(false);
-  }
-
   if (!hasLoaded) {
     return (
-      <main className="ProfilePage">
-        <div className="login-page-wrapper container">
-          <div className="login-panel">
-            <p className="login-eyebrow">{profileCopy.eyebrow}</p>
-            <h1 className="login-heading">{profileCopy.heading}</h1>
-            <p className="login-lead">{profileCopy.loading}</p>
-          </div>
-        </div>
-      </main>
+      <ProfileShell>
+        <p className="login-eyebrow">{profileCopy.eyebrow}</p>
+        <h1 className="profile-page-heading">{profileCopy.heading}</h1>
+        <p className="login-lead">{profileCopy.loading}</p>
+      </ProfileShell>
     );
   }
 
@@ -70,63 +34,51 @@ export default function ProfilePage() {
     return <LoginPage />;
   }
 
-  const providerName = providerLabels[user.provider] ?? user.provider;
+  const displayName = user.name?.trim() || profileCopy.missingName;
 
   return (
-    <main className="ProfilePage">
-      <div className="login-page-wrapper container">
-        <div className="login-panel">
-          <p className="login-eyebrow">{profileCopy.eyebrow}</p>
-          <h1 className="login-heading">{profileCopy.heading}</h1>
-          <p className="login-lead">{profileCopy.lead}</p>
+    <ProfileShell>
+      <h1 className="visually-hidden">{profileCopy.heading}</h1>
+      <Link href="/profile/account" className="profile-hero">
+        {user.avatarUrl ? (
+          <img className="profile-avatar" src={user.avatarUrl} alt="" />
+        ) : (
+          <span className="profile-avatar profile-avatar--placeholder" aria-hidden="true">
+            {(user.name || "앤").slice(0, 1)}
+          </span>
+        )}
+        <span className="profile-hero-body">
+          <span className="profile-hero-name">
+            {displayName}
+            <Chevron />
+          </span>
+          <span className="profile-hero-copy">{profileCopy.heroHint}</span>
+        </span>
+      </Link>
 
-          <div className="profile-card">
-            {user.avatarUrl ? (
-              <img
-                className="profile-avatar"
-                src={user.avatarUrl}
-                alt=""
-              />
-            ) : (
-              <span
-                className="profile-avatar profile-avatar--placeholder"
-                aria-hidden="true"
-              >
-                {(user.name || "앤").slice(0, 1)}
-              </span>
-            )}
-
-            <dl className="profile-details">
-              <div>
-                <dt>{profileCopy.nameLabel}</dt>
-                <dd>{user.name || profileCopy.missingName}</dd>
-              </div>
-              <div>
-                <dt>{profileCopy.emailLabel}</dt>
-                <dd>{user.email || profileCopy.missingEmail}</dd>
-              </div>
-              <div>
-                <dt>{profileCopy.providerLabel}</dt>
-                <dd>{providerName}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="profile-links">
-            <Link href="/mypage/orders">주문 내역</Link>
-            {user.isAdmin ? <Link href="/admin/orders">주문 관리</Link> : null}
-          </div>
-
-          <button
-            type="button"
-            className="button button--secondary profile-logout"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut ? profileCopy.loggingOut : profileCopy.logout}
-          </button>
-        </div>
-      </div>
-    </main>
+      <nav className="profile-menu" aria-label="내 정보">
+        <ProfileMenuRow
+          href="/mypage/orders"
+          title={profileCopy.orders}
+          copy={profileCopy.ordersHint}
+        />
+        <ProfileMenuRow
+          href="/profile/support"
+          title={profileCopy.support}
+          copy={profileCopy.supportHint}
+        />
+        <ProfileMenuRow href="/profile/inquiry" title={profileCopy.inquiry} />
+        <ProfileMenuRow
+          href="/profile/inquiries"
+          title={profileCopy.inquiryHistory}
+        />
+        {user.isAdmin ? (
+          <ProfileMenuRow
+            href="/admin/orders"
+            title={profileCopy.adminOrders}
+          />
+        ) : null}
+      </nav>
+    </ProfileShell>
   );
 }

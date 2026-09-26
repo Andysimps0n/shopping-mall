@@ -22,3 +22,17 @@ export function formatOrderDate(value) {
 export function orderStatusLabel(status) {
   return ORDER_STATUS_LABELS[status] ?? status;
 }
+
+/**
+ * Map a DB status to one of three UI tones:
+ * paid (완료), pending (대기·확인 중), failed (실패·취소).
+ */
+export function orderStatusTone(status) {
+  if (status === "PAID") return "paid";
+  if (status === "FAILED" || status === "CANCELLED") return "failed";
+  return "pending";
+}
+
+export function orderStatusClassName(baseClass, status) {
+  return `${baseClass} order-status-tone--${orderStatusTone(status)}`;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductImage from "./ProductImage";
 import { useCart } from "./CartProvider";
-import { CART_MAX_QUANTITY } from "@/lib/cart";
+import { CART_MAX_QUANTITY, cartFromQuote } from "@/lib/cart";
 import { quoteCart } from "@/lib/cartApi";
 import { formatPrice, getProductById, getProductPhotoSrc } from "@/lib/products";
 
@@ -21,12 +21,11 @@ export default function CartPage() {
     if (!hasHydrated || mode !== "guest") return;
 
     let ignore = false;
-    setQuote(null);
-    setQuoteReady(false);
 
     quoteCart(items).then((next) => {
       if (ignore) return;
-      setQuote(next);
+      // Keep the previous quote if this request fails, so the quantities stay put.
+      if (next) setQuote(next);
       setQuoteReady(true);
     });
 
@@ -35,7 +34,9 @@ export default function CartPage() {
     };
   }, [items, mode, hasHydrated]);
 
-  const priced = mode === "account" ? accountCart : quote;
+  // Guests already changed `items` in this browser. Reuse the quote's unit
+  // price so the number moves before the next quote request comes back.
+  const priced = mode === "account" ? accountCart : cartFromQuote(quote, items);
   const pricesReady = mode === "account" ? accountCart != null : quoteReady;
 
   if (!hasHydrated) {

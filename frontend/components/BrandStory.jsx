@@ -86,12 +86,14 @@ export default function BrandStory() {
         className="bp-section"
         aria-labelledby="bp-statement-heading"
       >
-        <div className="bp-statement-wrapper container">
-          <p className="bp-eyebrow">BRAND STATEMENT</p>
-          <h2 id="bp-statement-heading" className="bp-statement">
-            빼야 할 여섯 가지를 뺀 퍼펙트 천연. 침투가
-            아니라 순환으로 헤어, 두피, 피부를 돌봅니다.
-          </h2>
+        <div className="container">
+          <div className="bp-statement-wrapper">
+            <p className="bp-eyebrow">BRAND STATEMENT</p>
+            <h2 id="bp-statement-heading" className="bp-statement">
+              빼야 할 여섯 가지를 뺀 퍼펙트 천연. 침투가
+              아니라 순환으로 헤어, 두피, 피부를 돌봅니다.
+            </h2>
+          </div>
         </div>
       </section>
 

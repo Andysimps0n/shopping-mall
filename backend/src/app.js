@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.js";
 import productsRouter from "./routes/products.js";
 import cartRouter from "./routes/cart.js";
+import addressesRouter from "./routes/addresses.js";
 import ordersRouter from "./routes/orders.js";
 import paymentsRouter from "./routes/payments.js";
 import adminRouter from "./routes/admin.js";
@@ -16,10 +17,31 @@ export const app = express();
 // 켜야 req.ip가 손님 IP가 되고, 요청 제한이 프록시 IP 하나로 뭉치지 않는다.
 app.set("trust proxy", trustProxyFromEnv());
 
-// Next.js (localhost:3000) calls this API with the session cookie.
+// 브라우저는 localhost 와 127.0.0.1 을 다른 사이트로 본다.
+// 주소창만 바꿔 열어도 가격 요청이 막히지 않게 둘 다 허용한다.
+function isAllowedFrontendOrigin(origin) {
+  const configured = process.env.FRONTEND_URL || "http://localhost:3000";
+  if (origin === configured) return true;
+
+  try {
+    const url = new URL(origin);
+    const loopback = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    return loopback && url.port === "3000";
+  } catch {
+    return false;
+  }
+}
+
+// Next.js 가 세션 쿠키를 실어 API를 부른다. Origin 이 없으면 curl·서버 요청이다.
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin(origin, callback) {
+      if (!origin || isAllowedFrontendOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   }),
 );
@@ -39,6 +61,7 @@ app.use(cookieParser());
 app.use("/auth", authRouter);
 app.use("/products", productsRouter);
 app.use("/cart", cartRouter);
+app.use("/addresses", addressesRouter);
 app.use("/orders", ordersRouter);
 app.use("/payments", paymentsRouter);
 app.use("/admin", adminRouter);

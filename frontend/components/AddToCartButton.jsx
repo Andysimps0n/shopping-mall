@@ -8,14 +8,20 @@ import { useCart } from "./CartProvider";
  * Kept as its own client component so ProductDetail can stay a server
  * component. Feedback after add comes from the shared CartToast snackbar.
  */
-export default function AddToCartButton({ productId }) {
+export default function AddToCartButton({ productId, productName, unitPrice, imageUrl }) {
   const { addItem } = useCart();
 
   return (
     <button
       type="button"
       className="button product-page-cart"
-      onClick={() => addItem(productId)}
+      onClick={() =>
+        addItem(productId, {
+          name: productName,
+          unitPrice,
+          imageUrl,
+        })
+      }
     >
       장바구니
     </button>

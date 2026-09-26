@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { Webhook } from "@portone/server-sdk";
 import { isAdminUser } from "./admin.js";
-import { parseShippingAddress } from "./address.js";
+import { parseAddressBookEntry, parseShippingAddress, samePlace } from "./address.js";
 import { calculateShippingFee } from "../config/shipping.js";
 import { capQuantity, orderNameFromItems, priceLines } from "./orderMath.js";
 import { prisma } from "../../lib/prisma.js";
@@ -25,6 +25,7 @@ import { isPaymentId } from "./paymentId.js";
 import { rateLimit } from "./rateLimit.js";
 import { normalizeProductId } from "./cartStore.js";
 import { safeNextPath } from "./safeNext.js";
+import { updateDisplayName, upsertSocialUser } from "./users.js";
 
 test("shipping fee follows the config", () => {
   const free = { shippingFeeKrw: 0, freeShippingThresholdKrw: 0 };
@@ -87,6 +88,43 @@ test("address check rejects a short phone and ignores money fields", () => {
   assert.equal(good.ok, true);
   assert.equal(good.value.phone, "01012345678");
   assert.equal(good.value.totalAmount, undefined);
+});
+
+test("address book entry stores the place only", () => {
+  const saved = parseAddressBookEntry({
+    recipientName: "김앤",
+    phone: "010-1234-5678",
+    postalCode: "37774",
+    address1: "경북 포항시 남구 대이로 45",
+    address2: "9층",
+    isDefault: true,
+  });
+  assert.equal(saved.ok, true);
+  assert.equal(saved.value.postalCode, "37774");
+  assert.equal(saved.value.recipientName, undefined);
+  assert.equal(saved.value.phone, undefined);
+  assert.equal(saved.value.isDefault, true);
+
+  const missing = parseAddressBookEntry({ address1: "경북 포항시 남구 대이로 45" });
+  assert.equal(missing.ok, false);
+  assert.equal(missing.error, "postal_code_invalid");
+});
+
+test("the same postal code and lines are one place", () => {
+  const place = {
+    postalCode: "37774",
+    address1: "경북 포항시 남구 대이로 45",
+    address2: "9층",
+  };
+  assert.equal(samePlace(place, { ...place }), true);
+  assert.equal(samePlace(place, { ...place, address2: "10층" }), false);
+
+  const spaced = parseAddressBookEntry({
+    postalCode: "37774",
+    address1: "경북  포항시 남구 대이로 45",
+    address2: " 9층 ",
+  });
+  assert.equal(samePlace(place, spaced.value), true);
 });
 
 test("a payment is marked paid only when PortOne amount matches", () => {
@@ -959,6 +997,33 @@ test("merging the same cart twice does not double the quantity", async () => {
     assert.equal(larger.items[0].quantity, 4);
   } finally {
     await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("a saved shop name is not replaced on the next social login", async () => {
+  const stamp = `name-${crypto.randomUUID()}`;
+  const created = await upsertSocialUser({
+    provider: "kakao",
+    providerUserId: stamp,
+    email: `${stamp}@example.com`,
+    name: "카카오닉네임",
+    avatarUrl: null,
+  });
+
+  try {
+    const saved = await updateDisplayName(created.id, "앤클로이");
+    assert.equal(saved.name, "앤클로이");
+
+    const again = await upsertSocialUser({
+      provider: "kakao",
+      providerUserId: stamp,
+      email: `${stamp}@example.com`,
+      name: "카카오닉네임",
+      avatarUrl: null,
+    });
+    assert.equal(again.name, "앤클로이");
+  } finally {
+    await prisma.user.delete({ where: { id: created.id } });
   }
 });
 

@@ -12,6 +12,7 @@ import {
 import { fetchCurrentUser } from "@/lib/auth";
 import {
   addAccountCartItem,
+  fetchAccountCart,
   mergeAccountCart,
   removeAccountCartItem,
   setAccountCartQuantity,
@@ -19,9 +20,11 @@ import {
 import {
   CART_STORAGE_KEY,
   addItem as addItemToCart,
+  addPricedItem,
   getItemCount,
   normalizeCartItems,
   removeItem as removeItemFromCart,
+  repriceCart,
   setQuantity as setItemQuantity,
 } from "@/lib/cart";
 import { getProductById } from "@/lib/products";
@@ -73,6 +76,9 @@ export function CartProvider({ children }) {
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const requestSeq = useRef(0);
+  // Quantity clicks share one queue so an older save cannot finish last and
+  // overwrite a newer quantity in the database.
+  const writes = useRef(Promise.resolve());
 
   const rememberAccountCart = useCallback((cart) => {
     setAccountCart(cart);
@@ -163,30 +169,64 @@ export function CartProvider({ children }) {
   }, []);
 
   const applyAccountChange = useCallback(
-    async (task) => {
+    (task) => {
       const seq = requestSeq.current + 1;
       requestSeq.current = seq;
-      const cart = await task();
-      if (seq !== requestSeq.current || !cart) return null;
-      rememberAccountCart(cart);
-      return cart;
+
+      const run = writes.current.then(async () => {
+        const cart = await task();
+        if (seq !== requestSeq.current) return null;
+
+        if (cart) {
+          rememberAccountCart(cart);
+          return cart;
+        }
+
+        // The save did not stick. Put the screen back to whatever the database has.
+        const fresh = await fetchAccountCart();
+        if (seq !== requestSeq.current || !fresh) return null;
+        rememberAccountCart(fresh);
+        return null;
+      });
+
+      writes.current = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
     },
     [rememberAccountCart],
   );
 
+  const flushCartWrites = useCallback(() => writes.current, []);
+
+  // Name save should not re-merge the cart. Only swap the session user.
+  const setCurrentUser = useCallback((nextUser) => {
+    setUser(nextUser);
+  }, []);
+
   const addItem = useCallback(
-    (productId) => {
+    (productId, details) => {
       const product = getProductById(productId);
+      const name = details?.name || product?.name;
 
       if (mode === "account") {
-        applyAccountChange(() => addAccountCartItem(productId)).then((cart) => {
-          if (cart) showToast(product?.name ?? null);
-        });
+        // Toast and the header count update now. The POST still saves the line.
+        setAccountCart((current) =>
+          addPricedItem(current, productId, {
+            name,
+            unitPrice: details?.unitPrice,
+            imageUrl: details?.imageUrl,
+          }),
+        );
+        setItems((current) => addItemToCart(current, productId));
+        showToast(name ?? null);
+        applyAccountChange(() => addAccountCartItem(productId));
         return;
       }
 
       setItems((current) => addItemToCart(current, productId));
-      showToast(product?.name ?? null);
+      showToast(name ?? null);
     },
     [applyAccountChange, mode, showToast],
   );
@@ -194,6 +234,10 @@ export function CartProvider({ children }) {
   const setQuantity = useCallback(
     (productId, quantity) => {
       if (mode === "account") {
+        // Paint the new quantity from the unit price already on screen.
+        // The PATCH still runs, but the button does not wait for it.
+        setAccountCart((current) => repriceCart(current, productId, quantity));
+        setItems((current) => setItemQuantity(current, productId, quantity));
         applyAccountChange(() => setAccountCartQuantity(productId, quantity));
         return;
       }
@@ -205,6 +249,8 @@ export function CartProvider({ children }) {
   const removeItem = useCallback(
     (productId) => {
       if (mode === "account") {
+        setAccountCart((current) => repriceCart(current, productId, 0));
+        setItems((current) => removeItemFromCart(current, productId));
         applyAccountChange(() => removeAccountCartItem(productId));
         return;
       }
@@ -227,6 +273,8 @@ export function CartProvider({ children }) {
       removeItem,
       dismissToast,
       reloadCart: syncCart,
+      flushCartWrites,
+      setCurrentUser,
     }),
     [
       items,
@@ -240,6 +288,8 @@ export function CartProvider({ children }) {
       removeItem,
       dismissToast,
       syncCart,
+      flushCartWrites,
+      setCurrentUser,
     ],
   );
 

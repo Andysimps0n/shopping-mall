@@ -13,7 +13,19 @@ import {
   finishBrowserPayment,
   recordCheckoutLogin,
 } from "@/lib/checkoutApi";
+import {
+  createAddress,
+  fetchAddresses,
+  formFieldsFromAddress,
+  sameSavedAddress,
+  shouldAskToSaveAddress,
+} from "@/lib/addressApi";
 import { readCheckoutAddress, writeCheckoutAddress } from "@/lib/checkoutDraft";
+import {
+  applyKoreanPhoneInput,
+  formatKoreanPhone,
+  koreanPhoneError,
+} from "@/lib/phone";
 import { formatPrice } from "@/lib/products";
 import {
   NAVER_PAY_MIN_KRW,
@@ -50,7 +62,8 @@ const ORDER_ERRORS = {
 export default function CheckoutPage() {
   const router = useRouter();
   const formRef = useRef(null);
-  const { user, mode, accountCart, hasHydrated, reloadCart } = useCart();
+  const phoneRef = useRef(null);
+  const { user, mode, accountCart, hasHydrated, reloadCart, flushCartWrites } = useCart();
   const [form, setForm] = useState({
     recipientName: "",
     phone: "",
@@ -63,11 +76,17 @@ export default function CheckoutPage() {
   const [agreed, setAgreed] = useState(false);
   const [confirmingOrderId, setConfirmingOrderId] = useState("");
   const [error, setError] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [phase, setPhase] = useState("form");
   const [postcodeOpen, setPostcodeOpen] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState(null);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [hasPaidOrder, setHasPaidOrder] = useState(null);
+  const [saveNewAddress, setSaveNewAddress] = useState(false);
 
   useEffect(() => {
-    setForm(readCheckoutAddress());
+    const saved = readCheckoutAddress();
+    setForm({ ...saved, phone: formatKoreanPhone(saved.phone) });
     setDraftReady(true);
   }, []);
 
@@ -75,6 +94,37 @@ export default function CheckoutPage() {
     if (!draftReady) return;
     writeCheckoutAddress(form);
   }, [form, draftReady]);
+
+  useEffect(() => {
+    if (!draftReady || !hasHydrated || !user) return;
+
+    let ignore = false;
+    fetchAddresses().then((addresses) => {
+      if (ignore || !addresses) return;
+      setSavedAddresses(addresses);
+
+      const draft = readCheckoutAddress();
+      const match = addresses.find((address) => sameSavedAddress(draft, address));
+      if (match) {
+        setSelectedAddressId(match.id);
+        return;
+      }
+
+      const empty = !draft.recipientName && !draft.address1;
+      if (!empty || addresses.length === 0) {
+        setSelectedAddressId("custom");
+        return;
+      }
+
+      const chosen = addresses.find((address) => address.isDefault) ?? addresses[0];
+      setSelectedAddressId(chosen.id);
+      setForm((current) => ({ ...current, ...formFieldsFromAddress(chosen) }));
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [draftReady, hasHydrated, user]);
 
   useEffect(() => {
     if (!hasHydrated || user) return;
@@ -98,7 +148,11 @@ export default function CheckoutPage() {
 
     fetchMyOrders().then((result) => {
       if (ignore) return;
-      const open = (result.orders ?? []).find(
+      const orders = Array.isArray(result.orders) ? result.orders : null;
+      if (orders) {
+        setHasPaidOrder(orders.some((order) => order.status === "PAID"));
+      }
+      const open = (orders ?? []).find(
         (order) => order.status === "CONFIRMING" || order.status === "PENDING",
       );
       setConfirmingOrderId(open?.id ?? "");
@@ -109,12 +163,44 @@ export default function CheckoutPage() {
     };
   }, [hasHydrated, user]);
 
+  function markCustomAddress() {
+    setSelectedAddressId("custom");
+  }
+
+  function applySavedAddress(address) {
+    setSelectedAddressId(address.id);
+    setPhoneTouched(false);
+    setForm((current) => ({ ...current, ...formFieldsFromAddress(address) }));
+  }
+
   function updateField(name, value) {
+    if (name !== "memo") markCustomAddress();
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updatePhone(event) {
+    const { phone, cursor } = applyKoreanPhoneInput(
+      form.phone,
+      event.target.value,
+      event.target.selectionStart ?? event.target.value.length,
+    );
+    markCustomAddress();
+    setForm((current) => ({ ...current, phone }));
+    if (phoneTouched) {
+      event.target.setCustomValidity(koreanPhoneError(phone));
+    }
+    // 하이픈이 끼면 문자열 길이가 바뀐다. 숫자 개수 기준으로 커서를 되돌린다.
+    requestAnimationFrame(() => {
+      const input = phoneRef.current;
+      if (!input || document.activeElement !== input) return;
+      input.setSelectionRange(cursor, cursor);
+    });
   }
 
   async function startPay(payMethod) {
     setError("");
+    setPhoneTouched(true);
+    phoneRef.current?.setCustomValidity(koreanPhoneError(form.phone));
 
     if (!formRef.current?.reportValidity()) return;
 
@@ -142,6 +228,25 @@ export default function CheckoutPage() {
 
     writeCheckoutAddress(form);
     setPhase("paying");
+
+    const askToSave = shouldAskToSaveAddress({
+      hasPaidOrder,
+      savedAddresses,
+      form,
+    });
+    if (askToSave && saveNewAddress) {
+      const saved = await createAddress({
+        postalCode: form.postalCode,
+        address1: form.address1,
+        address2: form.address2,
+        isDefault: savedAddresses.length === 0,
+      });
+      if (saved.ok) setSavedAddresses(saved.addresses);
+    }
+
+    // The cart screen saves quantity in the background. Wait until that
+    // write finishes so the order uses the quantity the shopper just saw.
+    await flushCartWrites();
 
     const created = await createOrder({
       recipientName: form.recipientName,
@@ -252,6 +357,7 @@ export default function CheckoutPage() {
 
   const busy = phase !== "form";
   const payDisabled = busy || !agreed;
+  const phoneError = phoneTouched ? koreanPhoneError(form.phone) : "";
 
   return (
     <main className="CartPage">
@@ -270,6 +376,58 @@ export default function CheckoutPage() {
           className="checkout-form"
           onSubmit={(event) => event.preventDefault()}
         >
+          {savedAddresses == null ? null : savedAddresses.length > 0 ? (
+            <fieldset className="address-picker">
+              <legend className="login-field-label">저장된 배송지</legend>
+              {savedAddresses.map((address) => (
+                <label key={address.id} className="address-choice">
+                  <input
+                    type="radio"
+                    name="savedAddress"
+                    checked={selectedAddressId === address.id}
+                    onChange={() => applySavedAddress(address)}
+                  />
+                  <span className="address-choice-body">
+                    <span className="address-choice-name">
+                      {address.address1}
+                      {address.isDefault ? (
+                        <span className="address-default">기본</span>
+                      ) : null}
+                    </span>
+                    <span className="address-choice-meta">
+                      ({address.postalCode}) {address.address2}
+                    </span>
+                  </span>
+                </label>
+              ))}
+              <label className="address-choice">
+                <input
+                  type="radio"
+                  name="savedAddress"
+                  checked={selectedAddressId === "custom"}
+                  onChange={() => {
+                    setSelectedAddressId("custom");
+                    setForm((current) => ({
+                      ...current,
+                      postalCode: "",
+                      address1: "",
+                      address2: "",
+                    }));
+                  }}
+                />
+                <span>직접 입력</span>
+              </label>
+              <Link href="/profile/account/address" className="address-manage">
+                배송지 관리
+              </Link>
+            </fieldset>
+          ) : (
+            <p className="address-picker-empty">
+              저장된 배송지가 없습니다.{" "}
+              <Link href="/profile/account/address">배송지 등록</Link>
+            </p>
+          )}
+
           <label className="login-field">
             <span className="login-field-label">받는 사람</span>
             <input
@@ -285,14 +443,32 @@ export default function CheckoutPage() {
           <label className="login-field">
             <span className="login-field-label">휴대폰 번호</span>
             <input
+              ref={phoneRef}
               name="phone"
               required
               inputMode="tel"
               autoComplete="tel"
               placeholder="010-0000-0000"
+              aria-invalid={phoneError ? "true" : "false"}
+              aria-describedby={phoneError ? "checkout-phone-error" : undefined}
               value={form.phone}
-              onChange={(event) => updateField("phone", event.target.value)}
+              onChange={updatePhone}
+              onBlur={(event) => {
+                const { phone } = applyKoreanPhoneInput(
+                  form.phone,
+                  event.target.value,
+                  event.target.value.length,
+                );
+                setForm((current) => ({ ...current, phone }));
+                setPhoneTouched(true);
+                event.target.setCustomValidity(koreanPhoneError(phone));
+              }}
             />
+            {phoneError ? (
+              <span id="checkout-phone-error" className="checkout-error" role="alert">
+                {phoneError}
+              </span>
+            ) : null}
           </label>
 
             <div className="checkout-postal">
@@ -337,6 +513,17 @@ export default function CheckoutPage() {
               onChange={(event) => updateField("address2", event.target.value)}
             />
           </label>
+
+          {shouldAskToSaveAddress({ hasPaidOrder, savedAddresses, form }) ? (
+            <label className="checkout-consent">
+              <input
+                type="checkbox"
+                checked={saveNewAddress}
+                onChange={(event) => setSaveNewAddress(event.target.checked)}
+              />
+              <span>이 배송지를 저장합니다. 다음 주문에서 다시 고를 수 있습니다.</span>
+            </label>
+          ) : null}
 
           <label className="login-field">
             <span className="login-field-label">배송 메모</span>
@@ -441,6 +628,7 @@ export default function CheckoutPage() {
         {postcodeOpen ? (
           <AddressSearch
             onComplete={({ postalCode, address1 }) => {
+              markCustomAddress();
               setForm((current) => ({ ...current, postalCode, address1 }));
               setPostcodeOpen(false);
             }}

@@ -11,7 +11,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
-    "test": "node --test src/lib/checkout.test.js",
+    "test": "node --test src/lib/checkout.test.js src/lib/displayName.test.js",
     "lint": "find src lib prisma -name '*.js' -print0 | xargs -0 -n1 node --check"
   },
   "dependencies": {

@@ -4,7 +4,7 @@ import ProductCard from "./ProductCard";
 // 헤어 케어 and 피부 케어 read as equal, top-level titles — matching
 // the header links, not as children under a "Collection" label.
 // Layout lives in CSS: 2 columns on phones, 3 on desktop.
-export default function ProductGrid({ sections }) {
+export default function ProductGrid({ sections, prices = null }) {
 
   return (
     <div id="collection">
@@ -22,7 +22,11 @@ export default function ProductGrid({ sections }) {
             <p className="grid-copy">{section.copy}</p>
             <div className="grid-content">
               {section.products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  price={prices?.[product.id]}
+                />
               ))}
             </div>
           </div>

@@ -37,20 +37,25 @@ function HeartIcon({ filled }) {
  *
  * @param {object} props
  * @param {object} props.product
+ * @param {number | null | undefined} [props.price] 서버가 읽어 넘긴 DB 가격
  * @param {boolean} [props.compact] Tighter type for the recommendation row.
  */
-export default function ProductCard({ product, compact = false }) {
+export default function ProductCard({ product, price = null, compact = false }) {
   const { hasHydrated, isWishlisted, toggle } = useWishlist();
   const wishlisted = hasHydrated && isWishlisted(product.id);
-  // Client components cannot be async. The shared map loads after mount.
-  const prices = usePriceMap();
-  const price = prices?.[product.id];
+  // 서버가 가격을 주면 그 숫자를 쓴다. 찜 목록처럼 서버 값이 없을 때만 다시 읽는다.
+  const prices = usePriceMap(typeof price !== "number");
+  const shownPrice = typeof price === "number" ? price : prices?.[product.id];
 
   return (
     <article
       className={compact ? "ProductCard ProductCard--compact" : "ProductCard"}
     >
-      <Link href={`/products/${product.id}`} className="product-card-link">
+      <Link
+        href={`/products/${product.id}`}
+        className="product-card-link"
+        prefetch={true}
+      >
         <div className="product-card-media">
           <ProductImage
             name={product.name}
@@ -64,7 +69,7 @@ export default function ProductCard({ product, compact = false }) {
         <div className="product-card-content">
           <h3 className="product-card-name">{product.name}</h3>
           <p className="product-card-price">
-            {price != null ? formatPrice(price) : "가격 확인 중"}
+            {shownPrice != null ? formatPrice(shownPrice) : "가격 확인 중"}
           </p>
         </div>
       </Link>

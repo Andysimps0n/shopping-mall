@@ -3,8 +3,46 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchMyOrders } from "@/lib/checkoutApi";
+import { formatPrice } from "@/lib/products";
+import { formatOrderDate, orderStatusClassName, orderStatusLabel } from "@/lib/orderStatus";
 import { OrderSummary } from "./OrderResultPage";
-import { orderStatusLabel } from "@/lib/orderStatus";
+import InquiryLink from "./InquiryLink";
+
+function orderItemPreview(order) {
+  const items = order.items ?? [];
+  if (items.length === 0) return order.orderName || "주문 상품";
+
+  const first = items[0];
+  const label = `${first.productName} × ${first.quantity}`;
+  const extra = items.length - 1;
+  if (extra <= 0) return label;
+  return `${label} 외 ${extra}건`;
+}
+
+function OrderAccordion({ order }) {
+  return (
+    <details className="order-accordion">
+      <summary>
+        <span className="order-accordion-main">
+          <span className="order-accordion-meta">
+            <span className="order-accordion-date">{formatOrderDate(order.createdAt)}</span>
+            <span className={orderStatusClassName("order-accordion-status", order.status)}>
+              {orderStatusLabel(order.status)}
+            </span>
+          </span>
+          <span className="order-accordion-preview">{orderItemPreview(order)}</span>
+        </span>
+        <span className="order-accordion-aside">
+          <span className="order-accordion-total">{formatPrice(order.totalAmount)}</span>
+          <span className="order-accordion-chevron" aria-hidden="true" />
+        </span>
+      </summary>
+      <div className="order-accordion-body">
+        <OrderSummary order={order} showDate={false} />
+      </div>
+    </details>
+  );
+}
 
 export default function MyOrdersPage() {
   const [state, setState] = useState({ status: "loading", orders: [] });
@@ -74,14 +112,18 @@ export default function MyOrdersPage() {
             </Link>
           </div>
         ) : null}
-        <div className="order-list">
-          {state.orders.map((order) => (
-            <article key={order.id} className="order-card">
-              <p className="order-status">{orderStatusLabel(order.status)}</p>
-              <OrderSummary order={order} />
-            </article>
-          ))}
-        </div>
+        {state.status === "ready" && state.orders.length > 0 ? (
+          <div className="order-list order-list--accordion">
+            {state.orders.map((order) => (
+              <OrderAccordion key={order.id} order={order} />
+            ))}
+          </div>
+        ) : null}
+        {state.status === "ready" || state.status === "failed" ? (
+          <p className="my-orders-inquiry">
+            <InquiryLink variant="text" label="배송·교환·환불 문의하기" />
+          </p>
+        ) : null}
       </div>
     </main>
   );

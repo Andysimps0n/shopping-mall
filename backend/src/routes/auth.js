@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { upsertSocialUser } from "../lib/users.js";
+import { upsertSocialUser, updateDisplayName } from "../lib/users.js";
+import { parseDisplayName } from "../lib/displayName.js";
 import { prisma } from "../../lib/prisma.js";
 import { rateLimit } from "../lib/rateLimit.js";
 
@@ -20,6 +21,7 @@ import {
 } from "../lib/session.js";
 import { safeNextPath } from "../lib/safeNext.js";
 import { isAdminUser } from "../lib/admin.js";
+import { requireUser } from "../lib/requireUser.js";
 
 const router = Router();
 const NEXT_COOKIE = "oauth_next";
@@ -163,12 +165,36 @@ router.get("/me", async (req, res) => {
       res.json({ user: null });
       return;
     }
-    res.json({ user: { ...user, isAdmin: isAdminUser(user) } });
+    res.json({ user: publicUser(user) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "me_failed" });
   }
 });
+
+router.patch("/me", requireUser, async (req, res) => {
+  try {
+    const parsed = parseDisplayName(req.body?.name);
+    if (!parsed.ok) {
+      res.status(400).json({ error: parsed.error });
+      return;
+    }
+
+    const user = await updateDisplayName(req.userId, parsed.name);
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    if (err?.code === "P2025") {
+      res.status(401).json({ error: "login_required" });
+      return;
+    }
+    console.error(err);
+    res.status(500).json({ error: "name_save_failed" });
+  }
+});
+
+function publicUser(user) {
+  return { ...user, isAdmin: isAdminUser(user) };
+}
 
 router.post("/logout", (req, res) => {
   clearSessionCookie(res);

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchAdminOrders } from "@/lib/checkoutApi";
 import { formatPrice } from "@/lib/products";
-import { formatOrderDate, orderStatusLabel, PAY_METHOD_LABELS } from "@/lib/orderStatus";
+import { formatOrderDate, orderStatusClassName, orderStatusLabel, PAY_METHOD_LABELS } from "@/lib/orderStatus";
+import { OrderAddress } from "./OrderResultPage";
 
 export default function AdminOrdersPage() {
   const [state, setState] = useState({ status: "loading", orders: [] });
@@ -58,12 +59,13 @@ export default function AdminOrdersPage() {
 
         <div className="order-list">
           {state.orders.map((order) => {
-            const address = [order.address1, order.address2].filter(Boolean).join(" ");
             return (
               <article key={order.id} className="order-card">
                 <p className="order-date">{formatOrderDate(order.paidAt || order.createdAt)}</p>
                 <p className="order-status">
-                  {orderStatusLabel(order.status)}
+                  <span className={orderStatusClassName("order-status-label", order.status)}>
+                    {orderStatusLabel(order.status)}
+                  </span>
                   {" · "}
                   {PAY_METHOD_LABELS[order.payMethod] ?? order.payMethod}
                 </p>
@@ -83,21 +85,27 @@ export default function AdminOrdersPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="order-address">
-                  <p>{order.recipientName}</p>
-                  <p>{order.phone}</p>
-                  <p>
-                    ({order.postalCode}) {address}
-                  </p>
-                  {order.memo ? <p>{order.memo}</p> : null}
-                  {order.buyerName || order.buyerEmail ? (
-                    <p>
-                      계정 {order.buyerName || "이름 없음"}
-                      {order.buyerEmail ? ` · ${order.buyerEmail}` : ""}
-                    </p>
-                  ) : null}
-                  <p>합계 {formatPrice(order.totalAmount)}</p>
-                </div>
+                <OrderAddress
+                  order={order}
+                  showPayMethod={false}
+                  extra={
+                    <>
+                      {order.buyerName || order.buyerEmail ? (
+                        <div className="order-address-row">
+                          <dt>계정</dt>
+                          <dd>
+                            {order.buyerName || "이름 없음"}
+                            {order.buyerEmail ? ` · ${order.buyerEmail}` : ""}
+                          </dd>
+                        </div>
+                      ) : null}
+                      <div className="order-address-row">
+                        <dt>합계</dt>
+                        <dd>{formatPrice(order.totalAmount)}</dd>
+                      </div>
+                    </>
+                  }
+                />
               </article>
             );
           })}

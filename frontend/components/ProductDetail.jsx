@@ -1,5 +1,7 @@
 import Link from "next/link";
 import AddToCartButton from "./AddToCartButton";
+import InquiryLink from "./InquiryLink";
+import SectionLink from "./SectionLink";
 import WishlistButton from "./WishlistButton";
 import ProductBackButton from "./ProductBackButton";
 import ProductCard from "./ProductCard";
@@ -12,14 +14,15 @@ import ProductPlaceholderBanner from "./ProductPlaceholderBanner";
 import ProductReviews from "./ProductReviews";
 import { getProductBanner } from "@/lib/productBanners";
 import { formatPrice, getCollectionSectionId, getProductPhotoSrc } from "@/lib/products";
-import { fetchPrice } from "@/lib/fetchPrice";
-
+import { fetchPriceMap } from "@/lib/fetchPrice";
+import { inquiry } from "@/lib/business";
 
 export default async function ProductDetail({ id, product, recommended, reviews }) {
   const banner = getProductBanner(product.id);
   const imageSrc = getProductPhotoSrc(product);
 
-  const price = (await fetchPrice(id))?.price;
+  const prices = await fetchPriceMap();
+  const price = prices?.[id];
   
 
   return (
@@ -69,9 +72,9 @@ export default async function ProductDetail({ id, product, recommended, reviews 
             <nav className="product-page-breadcrumb" aria-label="경로">
               <Link href="/">홈</Link>
               <span aria-hidden="true"> / </span>
-              <Link href={`/#${getCollectionSectionId(product.category)}`}>
+              <SectionLink href={`/#${getCollectionSectionId(product.category)}`}>
                 {product.categoryLabel}
-              </Link>
+              </SectionLink>
             </nav>
 
             <h1 id="product-name" className="product-page-name">
@@ -81,12 +84,27 @@ export default async function ProductDetail({ id, product, recommended, reviews 
             <p className="product-page-price">{price != null ? formatPrice(price) : "가격 확인 중"}</p>
 
             <div className="product-page-actions">
-              <AddToCartButton productId={product.id} />
+              <AddToCartButton
+                productId={product.id}
+                productName={product.name}
+                unitPrice={price}
+                imageUrl={imageSrc}
+              />
               <button type="button" className="button button--secondary product-page-buy">
                 구매하기
               </button>
               <WishlistButton productId={product.id} />
             </div>
+            <p className="product-page-inquiry">
+              <InquiryLink
+                variant="text"
+                label={
+                  inquiry.kakaoChannelUrl
+                    ? "제품이 궁금하면 카카오톡으로 문의하기"
+                    : "제품 문의 (전화)"
+                }
+              />
+            </p>
           </div>
         </aside>
       </section>
@@ -106,7 +124,12 @@ export default async function ProductDetail({ id, product, recommended, reviews 
 
           <div className="recommend-content">
             {recommended.map((item) => (
-              <ProductCard key={item.id} product={item} compact />
+              <ProductCard
+                key={item.id}
+                product={item}
+                price={prices?.[item.id]}
+                compact
+              />
             ))}
           </div>
         </div>

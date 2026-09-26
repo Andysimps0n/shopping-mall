@@ -45,12 +45,48 @@ export const profileCopy = {
   lead: "로그인된 앤클로이 계정입니다.",
   loading: "계정을 확인하고 있습니다.",
   nameLabel: "이름",
+  nameHint: "프로필에 표시되는 이름입니다. 소셜 로그인 이름과 달라도 됩니다.",
+  namePlaceholder: "이름을 입력하세요",
+  nameSave: "저장",
+  nameSaving: "저장 중",
+  nameSaved: "이름을 저장했습니다.",
+  nameRequired: "이름을 입력해 주세요.",
+  nameTooLong: "이름은 40자 이내로 입력해 주세요.",
+  nameSaveFailed: "이름을 저장하지 못했습니다. 다시 시도해 주세요.",
   emailLabel: "이메일",
   providerLabel: "로그인",
   missingName: "등록된 이름이 없습니다.",
   missingEmail: "등록된 이메일이 없습니다.",
   logout: "로그아웃",
   loggingOut: "로그아웃 중",
+  heroHint: "계정 정보를 관리하세요",
+  orders: "주문 내역",
+  ordersHint: "주문 상태를 확인하고 배송지를 다시 볼 수 있습니다.",
+  support: "고객센터",
+  supportHint: "자주 묻는 질문",
+  inquiry: "문의",
+  inquiryHistory: "문의 내역",
+  adminOrders: "주문 관리",
+  accountHeading: "계정",
+  password: "비밀번호 변경",
+  photo: "프로필 이미지 변경",
+  address: "배송지 관리",
+  addressLead: "주소만 저장합니다. 받는 사람과 휴대폰 번호는 주문할 때 따로 입력합니다.",
+  addressAdd: "배송지 추가",
+  addressSave: "저장",
+  addressSaving: "저장 중",
+  addressCancel: "취소",
+  addressEdit: "수정",
+  addressDelete: "삭제",
+  addressDefault: "기본 배송지",
+  addressEmpty: "저장된 배송지가 없습니다.",
+  addressLimit: "배송지는 10개까지 저장할 수 있습니다.",
+  addressDuplicate: "같은 배송지가 이미 있습니다.",
+  leave: "회원 탈퇴",
+  inquiryEmpty:
+    "문의 방법은 아직 정하지 않았습니다. 급한 일은 고객센터 전화로 연락해 주세요.",
+  inquiryHistoryEmpty: "아직 문의 내역이 없습니다.",
+  featureSoon: "이 기능은 아직 준비 중입니다.",
 };
 
 /** Social provider id from the API → label shown on the profile page. */
@@ -113,6 +149,40 @@ export async function fetchCurrentUser() {
     return data.user ?? null;
   } catch {
     return null;
+  }
+}
+
+/** Same cap as backend displayName.js and the checkout recipient field. */
+export const DISPLAY_NAME_MAX = 40;
+
+const NAME_SAVE_ERRORS = {
+  name_required: profileCopy.nameRequired,
+  name_too_long: profileCopy.nameTooLong,
+};
+
+export function nameSaveMessage(error) {
+  return NAME_SAVE_ERRORS[error] || profileCopy.nameSaveFailed;
+}
+
+/**
+ * PATCH /auth/me — 계정에 보이는 이름만 바꾼다.
+ * 성공하면 갱신된 user, 실패하면 화면용 error 문구.
+ */
+export async function updateDisplayName(name) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: nameSaveMessage(data.error) };
+    }
+    return { user: data.user ?? null };
+  } catch {
+    return { error: profileCopy.nameSaveFailed };
   }
 }
 

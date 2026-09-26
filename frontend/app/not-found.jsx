@@ -12,15 +12,17 @@ export const metadata = {
 export default function NotFound() {
   return (
     <main className="NotFound">
-      <div className="not-found-wrapper container">
-        <p className="not-found-eyebrow">404</p>
-        <h1 className="not-found-heading">페이지를 찾을 수 없습니다</h1>
-        <p className="not-found-copy">
-          요청하신 주소가 없거나 옮겨졌습니다. 앤클로이 컬렉션으로 돌아가 보세요.
-        </p>
-        <Link href="/" className="not-found-cta">
-          홈으로
-        </Link>
+      <div className="container">
+        <div className="not-found-wrapper">
+          <p className="not-found-eyebrow">404</p>
+          <h1 className="not-found-heading">페이지를 찾을 수 없습니다</h1>
+          <p className="not-found-copy">
+            요청하신 주소가 없거나 옮겨졌습니다. 앤클로이 컬렉션으로 돌아가 보세요.
+          </p>
+          <Link href="/" className="not-found-cta">
+            홈으로
+          </Link>
+        </div>
       </div>
     </main>
   );

@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "./CartProvider";
 import { useWishlist } from "./WishlistProvider";
+import SectionLink from "./SectionLink";
 
 // Small, self-contained icon set. Inline SVGs keep the header dependency-free
 // and let us match the quiet, thin-line look the brand wants.
@@ -61,7 +63,7 @@ function HomeIcon({ filled = false }) {
   );
 }
 
-function BrandIcon({ filled = false }) {
+function CatalogIcon({ filled = false }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -73,9 +75,10 @@ function BrandIcon({ filled = false }) {
       className="icon"
       aria-hidden="true"
     >
-      <path d="M12 3v3" />
-      <path d="M8 21c0-4 8-4 8 0" />
-      <path d="M7 9.5c1.5-3 8.5-3 10 0-1 5-4 8-5 8s-4-3-5-8Z" />
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1" />
     </svg>
   );
 }
@@ -101,7 +104,7 @@ function UserIcon({ filled = false }) {
 function ProfileLink() {
   const pathname = usePathname();
   const { user, hasHydrated } = useCart();
-  const isActive = pathname === "/profile";
+  const isProfile = pathname === "/profile" || pathname.startsWith("/profile/");
   const label = hasHydrated && user ? user.name?.trim() || "내 정보" : "로그인";
 
   return (
@@ -110,11 +113,11 @@ function ProfileLink() {
       className={
         !hasHydrated
           ? "header-session header-session--pending"
-          : isActive
+          : isProfile
             ? "header-session is-active"
             : "header-session"
       }
-      aria-current={isActive ? "page" : undefined}
+      aria-current={isProfile ? "page" : undefined}
     >
       {label}
     </Link>
@@ -181,8 +184,10 @@ function BrandLogo() {
 }
 
 function TabLink({ href, label, active, badge, children }) {
+  const Tag = href.includes("#") ? SectionLink : Link;
+
   return (
-    <Link
+    <Tag
       href={href}
       className={active ? "header-tab is-active" : "header-tab"}
       aria-current={active ? "page" : undefined}
@@ -197,33 +202,49 @@ function TabLink({ href, label, active, badge, children }) {
         ) : null}
       </span>
       <span className="header-tab-label">{label}</span>
-    </Link>
+    </Tag>
   );
+}
+
+function usePageHash() {
+  const pathname = usePathname();
+  const [hash, setHash] = useState("");
+
+  useEffect(() => {
+    function read() {
+      setHash(window.location.hash);
+    }
+
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, [pathname]);
+
+  return hash;
 }
 
 function MobileTabBar() {
   const pathname = usePathname();
-  const { itemCount: cartCount, hasHydrated: cartReady } = useCart();
+  const hash = usePageHash();
+  const { itemCount: cartCount, hasHydrated: cartReady, user } = useCart();
   const { itemCount: wishCount, hasHydrated: wishReady } = useWishlist();
   const cartBadge = cartReady && cartCount > 0 ? cartCount : null;
   const wishBadge = wishReady && wishCount > 0 ? wishCount : null;
-  const isProfile = pathname === "/profile";
+  const onCollection =
+    hash === "#collection" || hash === "#hair-care" || hash === "#skin-care";
+  const isHome = pathname === "/" && !onCollection;
+  const isCatalog =
+    pathname.startsWith("/products") || (pathname === "/" && onCollection);
+  const isProfile = pathname === "/profile" || pathname.startsWith("/profile/");
+  const profileLabel = cartReady && user ? "내 정보" : "로그인";
 
   return (
     <nav className="header-mobile" aria-label="하단 메뉴">
-      <TabLink href="/" label="홈" active={pathname === "/"}>
-        <HomeIcon filled={pathname === "/"} />
+      <TabLink href="/" label="홈" active={isHome}>
+        <HomeIcon filled={isHome} />
       </TabLink>
-      <TabLink href="/brand" label="브랜드" active={pathname === "/brand"}>
-        <BrandIcon filled={pathname === "/brand"} />
-      </TabLink>
-      <TabLink
-        href="/cart"
-        label="장바구니"
-        active={pathname === "/cart"}
-        badge={cartBadge}
-      >
-        <CartIcon />
+      <TabLink href="/#collection" label="제품" active={isCatalog}>
+        <CatalogIcon filled={isCatalog} />
       </TabLink>
       <TabLink
         href="/wishlist"
@@ -233,10 +254,17 @@ function MobileTabBar() {
       >
         <HeartIcon filled={pathname === "/wishlist"} />
       </TabLink>
-      <TabLink href="/profile" label="프로필" active={isProfile}>
+      <TabLink href="/profile" label={profileLabel} active={isProfile}>
         <UserIcon filled={isProfile} />
       </TabLink>
-
+      <TabLink
+        href="/cart"
+        label="장바구니"
+        active={pathname === "/cart"}
+        badge={cartBadge}
+      >
+        <CartIcon />
+      </TabLink>
     </nav>
   );
 }
@@ -248,21 +276,21 @@ export default function Header() {
         <BrandLogo />
 
         <nav className="header-content">
-          <Link href="/#hair-care" className="header-link">
+          <SectionLink href="/#hair-care" className="header-link">
             헤어 케어
-          </Link>
-          <Link href="/#skin-care" className="header-link">
+          </SectionLink>
+          <SectionLink href="/#skin-care" className="header-link">
             피부 케어
-          </Link>
+          </SectionLink>
           <Link href="/brand" className="header-link">
             브랜드
           </Link>
         </nav>
 
         <div className="header-actions">
-          <CartLink />
-          <WishlistLink />
           <ProfileLink />
+          <WishlistLink />
+          <CartLink />
         </div>
       </div>
 

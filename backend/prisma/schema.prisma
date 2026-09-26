@@ -44,6 +44,7 @@ model User {
   updatedAt      DateTime     @updatedAt
   cart           Cart?
   orders         Order[]
+  addresses      ShippingAddress[]
   @@unique([provider, providerUserId])
   @@map("users")
 }
@@ -127,6 +128,22 @@ model OrderItem {
   quantity    Int
   lineTotal   Int
   @@map("order_items")
+}
+
+// 로그인한 사용자의 배송지. 주문은 결제 시점의 주소를 따로 복사해 둔다.
+model ShippingAddress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postalCode    String
+  address1      String
+  address2      String   @default("")
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@unique([userId, postalCode, address1, address2])
+  @@index([userId])
+  @@map("shipping_addresses")
 }
 
 // 결제 직전 로그인으로 보낸 횟수와, 로그인 후 체크아웃으로 돌아온 횟수.

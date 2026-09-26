@@ -6,7 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { fetchOrder, refreshOrder } from "@/lib/checkoutApi";
 import { clearCheckoutAddress } from "@/lib/checkoutDraft";
 import { formatPrice } from "@/lib/products";
-import { formatOrderDate, orderStatusLabel, PAY_METHOD_LABELS } from "@/lib/orderStatus";
+import { formatOrderDate, orderStatusClassName, orderStatusLabel, PAY_METHOD_LABELS } from "@/lib/orderStatus";
+import InquiryLink from "./InquiryLink";
+import OrderConfetti from "./OrderConfetti";
 
 const RESULT_COPY = {
   PAID: {
@@ -137,36 +139,47 @@ export default function OrderResultPage({ orderId, tone }) {
   const pgMessage = showPgMessage ? browserMessage || order.failureMessage || "" : "";
 
   return (
-    <Shell title={copy.title}>
-      <p className="order-status">{orderStatusLabel(order.status)}</p>
-      {copy.body ? <p className="cart-empty-copy">{copy.body}</p> : null}
-      {pgMessage ? <p className="order-pg-message">{pgMessage}</p> : null}
-      <OrderSummary order={order} />
-      <div className="order-actions">
+    <>
+      {paid ? <OrderConfetti orderId={order.id} /> : null}
+      <Shell title={copy.title}>
+        <p className={orderStatusClassName("order-status", order.status)}>
+          {orderStatusLabel(order.status)}
+        </p>
+        {copy.body ? <p className="cart-empty-copy">{copy.body}</p> : null}
+        {pgMessage ? <p className="order-pg-message">{pgMessage}</p> : null}
+        <OrderSummary order={order} />
         {paid ? (
-          <Link href="/mypage/orders" className="button">
-            주문 내역
-          </Link>
-        ) : confirming ? (
-          <button type="button" className="button" disabled>
-            결제 확인 중
-          </button>
-        ) : (
-          <Link href="/checkout" className="button">
-            다시 결제하기
-          </Link>
-        )}
-      </div>
-    </Shell>
+          <p className="order-inquiry-link">
+            <InquiryLink variant="text" label="배송·교환·환불 문의하기" />
+          </p>
+        ) : null}
+        <div className={paid || confirming ? "order-actions" : "order-actions order-actions--fail"}>
+          {paid ? (
+            <Link href="/mypage/orders" className="button">
+              주문 내역
+            </Link>
+          ) : confirming ? (
+            <button type="button" className="button" disabled>
+              결제 확인 중
+            </button>
+          ) : (
+            <>
+              <Link href="/checkout" className="button">
+                다시 결제하기
+              </Link>
+              <InquiryLink variant="secondary-button" label="문의하기" />
+            </>
+          )}
+        </div>
+      </Shell>
+    </>
   );
 }
 
-export function OrderSummary({ order }) {
-  const address = [order.address1, order.address2].filter(Boolean).join(" ");
-
+export function OrderSummary({ order, showDate = true }) {
   return (
     <section className="order-summary">
-      <p className="order-date">{formatOrderDate(order.createdAt)}</p>
+      {showDate ? <p className="order-date">{formatOrderDate(order.createdAt)}</p> : null}
       <ul className="checkout-lines">
         {order.items.map((item) => (
           <li key={`${item.productId}-${item.productName}`}>
@@ -191,25 +204,49 @@ export function OrderSummary({ order }) {
           <dd>{formatPrice(order.totalAmount)}</dd>
         </div>
       </dl>
-      <div className="order-address">
-        <p>{order.recipientName}</p>
-        <p>{order.phone}</p>
-        <p>
-          ({order.postalCode}) {address}
-        </p>
-        {order.memo ? <p>{order.memo}</p> : null}
-        <p>{PAY_METHOD_LABELS[order.payMethod] ?? order.payMethod}</p>
-      </div>
+      <OrderAddress order={order} />
     </section>
+  );
+}
+
+function AddressRow({ label, children }) {
+  return (
+    <div className="order-address-row">
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+export function OrderAddress({ order, showPayMethod = true, extra = null }) {
+  const address = [order.address1, order.address2].filter(Boolean).join(" ");
+
+  return (
+    <dl className="order-address">
+      <AddressRow label="받는 사람">{order.recipientName}</AddressRow>
+      <AddressRow label="휴대폰 번호">{order.phone}</AddressRow>
+      <AddressRow label="주소">
+        ({order.postalCode}) {address}
+      </AddressRow>
+      {order.memo ? <AddressRow label="배송 메모">{order.memo}</AddressRow> : null}
+      {showPayMethod ? (
+        <AddressRow label="결제 수단">
+          {PAY_METHOD_LABELS[order.payMethod] ?? order.payMethod}
+        </AddressRow>
+      ) : null}
+      {extra}
+    </dl>
   );
 }
 
 function Shell({ title, children }) {
   return (
     <main className="CartPage">
-      <div className="cart-page-wrapper container order-result">
-        <h1 className="cart-page-heading">{title}</h1>
-        {children}
+      <div className="cart-page-wrapper container">
+        <div className="order-result">
+          <h1 className="cart-page-heading">{title}</h1>
+          {children}
+        </div>
       </div>
     </main>
   );

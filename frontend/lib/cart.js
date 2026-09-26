@@ -141,6 +141,128 @@ export function getCartTotal(lines) {
 }
 
 /**
+ * Change one priced line and recompute the totals from unit prices we already have.
+ * Quantity 0 removes the line. The screen uses this before the server answers.
+ *
+ * @param {object | null} cart
+ * @param {string} productId
+ * @param {number} quantity
+ */
+export function repriceCart(cart, productId, quantity) {
+  if (!cart || !Array.isArray(cart.items)) return cart;
+
+  const next = Math.floor(Number(quantity));
+  const items = [];
+
+  for (const item of cart.items) {
+    if (item.productId !== productId) {
+      items.push(item);
+      continue;
+    }
+
+    if (!Number.isFinite(next) || next <= 0) continue;
+
+    const capped = Math.min(next, CART_MAX_QUANTITY);
+    const unitPrice = item.unitPrice;
+    items.push({
+      ...item,
+      quantity: capped,
+      lineTotal: typeof unitPrice === "number" ? unitPrice * capped : item.lineTotal,
+    });
+  }
+
+  return withTotals(cart, items);
+}
+
+/**
+ * Add one unit before the server answers.
+ * An existing line increases. A new line needs the unit price already on screen.
+ *
+ * @param {object | null} cart
+ * @param {string} productId
+ * @param {{ name?: string, unitPrice?: number | null, imageUrl?: string | null }} details
+ */
+export function addPricedItem(cart, productId, details) {
+  const base =
+    cart && Array.isArray(cart.items)
+      ? cart
+      : { items: [], itemsTotal: 0, shippingFee: 0, totalAmount: 0 };
+
+  const existing = base.items.find((item) => item.productId === productId);
+  if (existing) {
+    return repriceCart(
+      base,
+      productId,
+      Math.min(existing.quantity + 1, CART_MAX_QUANTITY),
+    );
+  }
+
+  if (typeof details?.unitPrice !== "number") return cart;
+
+  const name = details.name || "상품";
+  return withTotals(base, [
+    ...base.items,
+    {
+      productId,
+      productName: name,
+      name,
+      unitPrice: details.unitPrice,
+      quantity: 1,
+      lineTotal: details.unitPrice,
+      imageUrl: details.imageUrl ?? null,
+    },
+  ]);
+}
+
+/**
+ * Guest cart: keep the quote's unit prices, but show the quantities
+ * already stored in this browser. A new quote can replace this later.
+ *
+ * @param {object | null} quote
+ * @param {CartItem[]} items
+ */
+export function cartFromQuote(quote, items) {
+  if (!quote || !Array.isArray(quote.items)) return null;
+
+  const priced = new Map(quote.items.map((line) => [line.productId, line]));
+  const lines = [];
+
+  for (const item of items) {
+    const known = priced.get(item.productId);
+    if (!known || typeof known.unitPrice !== "number") continue;
+
+    const quantity = Math.min(
+      Math.floor(Number(item.quantity)) || 0,
+      CART_MAX_QUANTITY,
+    );
+    if (quantity <= 0) continue;
+
+    lines.push({
+      ...known,
+      quantity,
+      lineTotal: known.unitPrice * quantity,
+    });
+  }
+
+  return withTotals(quote, lines);
+}
+
+function withTotals(cart, items) {
+  const itemsTotal = items.reduce((sum, item) => {
+    return sum + (typeof item.lineTotal === "number" ? item.lineTotal : 0);
+  }, 0);
+  const shippingFee = items.length === 0 || cart.shippingFee === 0 ? 0 : cart.shippingFee;
+
+  return {
+    ...cart,
+    items,
+    itemsTotal,
+    shippingFee,
+    totalAmount: itemsTotal + shippingFee,
+  };
+}
+
+/**
  * Parse a raw localStorage value into a clean CartItem[].
  * Invalid entries are dropped so bad data cannot crash the UI.
  *

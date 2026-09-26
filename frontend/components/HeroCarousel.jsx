@@ -69,7 +69,7 @@ function productIndexFromTrack(trackIndex, total) {
   return trackIndex - 1;
 }
 
-export default function HeroCarousel({ products }) {
+export default function HeroCarousel({ products, prices = null }) {
   const total = products.length;
   const slides = buildSlides(products);
   const canLoop = total > 1;
@@ -85,8 +85,9 @@ export default function HeroCarousel({ products }) {
 
   const activeProductIndex = productIndexFromTrack(trackIndex, total);
   const activeProduct = products[activeProductIndex];
-  const prices = usePriceMap();
-  const activePrice = activeProduct ? prices?.[activeProduct.id] : undefined;
+  const livePrices = usePriceMap(prices == null);
+  const priceMap = prices ?? livePrices;
+  const activePrice = activeProduct ? priceMap?.[activeProduct.id] : undefined;
 
   const snapToRealSlideIfNeeded = useCallback(
     (index) => {
@@ -288,6 +289,7 @@ export default function HeroCarousel({ products }) {
           <Link
             href={`/products/${activeProduct.id}`}
             className="button hero-button"
+            prefetch={true}
           >
             자세히 보기
           </Link>
